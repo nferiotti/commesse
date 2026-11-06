@@ -7,179 +7,355 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Commesse">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#eef2f6">
+<meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151b22" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icona-180.png">
 <title>Commesse</title>
 <style>
 :root {
+  color-scheme: light dark;
   --bg: #eef2f6; --card: #fff; --ink: #111a24; --text: #2b3540; --muted: #5d6874;
-  --line: #dde3ea; --accent: #4d6a82; --accent-soft: #e8eef4;
+  --line: #dde3ea; --accent: #4d6a82; --accent-soft: #e8eef4; --tab: rgba(255,255,255,.92); --su-accent: #fff;
   --red: #b8433a; --green: #4f8a3c; --r: 14px;
+  --shadow: 0 1px 2px rgba(20,40,60,.06), 0 2px 10px rgba(20,40,60,.06);
 }
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151b22; --card: #1f2730; --ink: #f1f4f7; --text: #d5dce3; --muted: #9aa6b2;
+    --line: #313b46; --accent: #8fb0c9; --accent-soft: #2a3642; --tab: rgba(31,39,48,.92); --su-accent: #12202c;
+    --red: #e5776d; --green: #84bd72; --shadow: none;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; height: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--text);
+  margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
   font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  padding: calc(env(safe-area-inset-top) + 16px) calc(env(safe-area-inset-right) + 16px)
-           calc(env(safe-area-inset-bottom) + 24px) calc(env(safe-area-inset-left) + 16px);
 }
-main { max-width: 560px; margin: 0 auto; }
-h1 { font-size: 24px; line-height: 1.2; margin: 0; color: var(--ink); }
-.sotto { margin: 4px 0 16px; color: var(--muted); font-size: 15px; }
-.card { background: var(--card); border-radius: var(--r); padding: 16px; margin-bottom: 12px;
-        box-shadow: 0 1px 2px rgba(20,40,60,.06), 0 2px 10px rgba(20,40,60,.06); }
-.card h2 { font-size: 17px; margin: 0 0 8px; color: var(--ink); }
-.card p { margin: 0 0 12px; }
-.card p:last-child { margin-bottom: 0; }
-ol.passi { list-style: none; margin: 0; padding: 0; }
-ol.passi li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
-ol.passi li:first-child { border-top: 0; padding-top: 0; }
-ol.passi li:last-child { padding-bottom: 0; }
-.segno { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-         background: var(--accent-soft); color: var(--muted); font-size: 14px; font-weight: 700; }
-.ok .segno { background: var(--green); color: #fff; }
-.errore .segno { background: var(--red); color: #fff; }
-.titolo { font-weight: 600; color: var(--ink); }
-.dettaglio { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
-.errore .dettaglio { color: var(--red); }
-button, .tasto {
-  display: block; width: 100%; min-height: 46px; padding: 12px 14px; border: 0; border-radius: 11px;
-  background: var(--accent); color: #fff; font: inherit; font-weight: 600; text-align: center;
-  text-decoration: none; margin-top: 8px; -webkit-tap-highlight-color: transparent;
-}
-button.secondo { background: var(--accent-soft); color: var(--accent); }
-.due { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-input {
-  width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px;
-  font: inherit; font-size: 16px; background: #fff; color: var(--ink);
-}
-img.foto { display: block; width: 100%; max-height: 300px; object-fit: contain; border-radius: 10px; background: var(--accent-soft); }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: 13px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; text-align: left; }
+a { color: var(--accent); text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+.ic { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 [hidden] { display: none !important; }
-footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+
+#app { height: 100dvh; display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
+#lato { display: none; }
+#vista, #lato { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+.pagina {
+  max-width: 760px; margin: 0 auto; min-height: 100%;
+  padding: calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 16px) 20px calc(env(safe-area-inset-left) + 16px);
+}
+#schede-app {
+  display: grid; grid-template-columns: repeat(3, 1fr); background: var(--tab); border-top: 1px solid var(--line);
+  padding: 6px env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 4px) env(safe-area-inset-left);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+#schede-app button { display: grid; justify-items: center; gap: 1px; min-height: 48px; padding: 4px; color: var(--muted); font-size: 12px; }
+#schede-app button.attiva { color: var(--accent); font-weight: 600; }
+
+/* elenco */
+h1 { font-size: 30px; line-height: 1.15; color: var(--ink); letter-spacing: -.01em; }
+.stato { min-height: 22px; margin: 2px 0 10px; color: var(--muted); font-size: 13px; }
+.stato.errore { color: var(--red); }
+.ricerca { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 12px; padding: 0 12px; box-shadow: var(--shadow); margin-bottom: 14px; color: var(--muted); }
+.ricerca input { flex: 1; min-width: 0; height: 44px; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); }
+.gruppo { display: flex; align-items: center; gap: 8px; margin: 18px 2px 6px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.gruppo:first-child { margin-top: 2px; }
+.pallino { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--accent)); flex: none; }
+.lista { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.commessa { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 12px; width: 100%; align-items: center; padding: 11px 12px 11px 0; border-top: 1px solid var(--line); min-height: 60px; }
+.lista > :first-child { border-top: 0; }
+.commessa.attiva { background: var(--accent-soft); }
+.commessa .banda { align-self: stretch; background: var(--c, var(--accent)); border-radius: 0 3px 3px 0; }
+.commessa b { display: block; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commessa small { display: block; color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conta { min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.conta.rosso { background: var(--red); color: var(--su-accent); }
+details.archivio > summary { list-style: none; cursor: pointer; }
+details.archivio > summary::-webkit-details-marker { display: none; }
+
+/* testa della commessa */
+.testa { position: sticky; top: 0; z-index: 3; background: var(--bg); margin: calc(-12px - env(safe-area-inset-top)) -16px 0; padding: calc(env(safe-area-inset-top) + 6px) 16px 0; }
+.indietro { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; margin-left: -6px; color: var(--accent); }
+.testa h2 { font-size: 22px; line-height: 1.2; color: var(--ink); }
+.sottotitolo { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.tasti-schede { display: flex; gap: 6px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px 10px; scrollbar-width: none; }
+.tasti-schede::-webkit-scrollbar { display: none; }
+.tasti-schede button, .filtri button { flex: none; min-height: 36px; padding: 6px 12px; border-radius: 18px; background: var(--card); color: var(--text); font-size: 14px; box-shadow: var(--shadow); white-space: nowrap; }
+.tasti-schede button.attiva, .filtri button.attiva { background: var(--accent); color: var(--su-accent); font-weight: 600; }
+.filtri { display: flex; gap: 6px; margin-bottom: 12px; }
+
+/* schede */
+.card { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px; }
+.card > h3, .sezione { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.sezione { margin-top: 16px; }
+.dato { padding: 6px 0; border-top: 1px solid var(--line); }
+.dato:first-child, h3 + .dato { border-top: 0; padding-top: 0; }
+.dato span { display: block; color: var(--muted); font-size: 13px; }
+.dato div { color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.azioni { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.tasto { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 15px; font-weight: 600; }
+.tasto .ic { width: 18px; height: 18px; }
+.tasto.pieno { background: var(--accent); color: var(--su-accent); justify-content: center; width: 100%; min-height: 46px; }
+.tasto.largo { justify-content: center; width: 100%; margin-top: 8px; }
+details.voce { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 10px; overflow: hidden; }
+details.voce > summary { display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 8px; align-items: center; padding: 12px 14px; min-height: 56px; list-style: none; cursor: pointer; }
+details.voce > summary::-webkit-details-marker { display: none; }
+details.voce > summary .freccia { color: var(--muted); transition: transform .15s; display: grid; }
+details.voce > summary .freccia .ic { width: 18px; height: 18px; }
+details.voce[open] > summary .freccia { transform: rotate(90deg); }
+.voce-titolo { display: block; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.voce-sotto { display: block; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; font-weight: 400; }
+.pillole { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.pillola { display: inline-flex; align-items: center; min-height: 22px; padding: 1px 8px; border-radius: 11px; font-size: 12.5px; font-weight: 600; color: var(--c, var(--accent)); background: color-mix(in srgb, var(--c, var(--accent)) 14%, transparent); }
+.corpo { padding: 10px 14px 14px; border-top: 1px solid var(--line); }
+.vuoto { padding: 30px 16px; text-align: center; color: var(--muted); }
+.vuoto b { display: block; color: var(--ink); margin-bottom: 4px; }
+.etichette { display: flex; flex-wrap: wrap; gap: 6px; }
+.etichetta { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 8px; background: var(--accent-soft); font-size: 14px; color: var(--text); }
+.etichetta.fatta { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.etichetta .ic { width: 14px; height: 14px; }
+.attivita { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); width: 100%; }
+.attivita:first-child, h3 + .attivita { border-top: 0; padding-top: 2px; }
+.attivita b { display: block; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.attivita small { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.attivita .quando { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.attivita .quando.scaduta { color: var(--red); }
+.attivita.fatta b { color: var(--muted); text-decoration: line-through; }
+.prodotto { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
+.miniatura { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--accent-soft); display: grid; place-items: center; color: var(--muted); }
+.miniatura img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.controllo { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.sezione + .controllo { border-top: 0; }
+.controllo b { font-size: 15px; text-align: center; }
+.controllo.si b { color: var(--green); } .controllo.no b { color: var(--red); } .controllo.na b { color: var(--muted); }
+
+/* foto e documenti */
+.foto-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.foto-tasto { position: relative; display: block; width: 100%; aspect-ratio: 1; border-radius: 9px; overflow: hidden; background: var(--accent-soft); color: var(--muted); }
+.foto-tasto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.foto-tasto .ic { position: absolute; inset: 0; margin: auto; }
+.documento { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 46px; padding: 8px 0; border-top: 1px solid var(--line); color: var(--ink); width: 100%; }
+.documento:first-child { border-top: 0; }
+.documento span { overflow-wrap: anywhere; }
+.documento small { display: block; color: var(--muted); font-size: 13px; }
+.documento .ic { color: var(--accent); }
+.documento.spento, .documento.spento .ic { color: var(--muted); }
+#visore { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #000; color: #fff; }
+#visore header { display: flex; justify-content: flex-end; padding: calc(env(safe-area-inset-top) + 6px) 12px 6px; }
+#visore .scorri { overflow: auto; display: grid; place-items: center; touch-action: pan-x pan-y pinch-zoom; }
+#visore img { max-width: 100%; max-height: 100%; object-fit: contain; }
+#visore footer { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; align-items: center; padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px); text-align: center; font-size: 14px; }
+#visore button { display: grid; place-items: center; min-width: 44px; min-height: 44px; color: #fff; }
+#avviso { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 76px); z-index: 30; max-width: 420px; margin: 0 auto; padding: 11px 14px; border-radius: 12px; background: #1d2730; color: #fff; text-align: center; font-size: 15px; }
+
+/* collegamento e informazioni */
+.accesso { max-width: 460px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 36px) 16px 24px; }
+.accesso p { margin: 10px 0; }
+.accesso input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; font-size: 16px; background: var(--card); color: var(--ink); }
+.accesso .tasto { margin-top: 8px; }
+footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+
+/* iPad e schermi larghi: elenco fisso a sinistra */
+@media (min-width: 820px) {
+  #app { grid-template-columns: 340px minmax(0, 1fr); }
+  #lato { display: block; grid-row: 1; grid-column: 1; border-right: 1px solid var(--line); }
+  #vista { grid-row: 1; grid-column: 2; }
+  #schede-app { grid-column: 1 / -1; grid-template-columns: repeat(3, 150px); justify-content: center; }
+  .indietro { display: none; }
+  .testa { padding-top: calc(env(safe-area-inset-top) + 14px); }
+}
 </style>
 </head>
 <body>
-<main>
-  <h1>Prova iPhone</h1>
-  <p class="sotto">Gestione Commesse: controllo di accesso, foto, PDF e uso senza rete.</p>
-
-  <section class="card" id="home" hidden>
-    <h2>Prima aggiungi l'icona</h2>
-    <p>In Safari tocca Condividi, poi «Aggiungi alla schermata Home». Apri la prova dall'icona, non da Safari.</p>
-    <button class="secondo" id="continua">Continua comunque in Safari</button>
-  </section>
-
-  <section class="card" id="accesso" hidden>
-    <h2>Collega Dropbox</h2>
-    <p>1. Tocca il tasto, accedi a Dropbox e consenti l'accesso.</p>
-    <a class="tasto" id="apriLogin" target="_blank" rel="noopener">Apri Dropbox</a>
-    <p style="margin-top:14px">2. Copia il codice che Dropbox ti mostra, torna qui e incollalo.</p>
-    <input id="codice" placeholder="Incolla qui il codice" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Codice di Dropbox">
-    <button id="conferma">Conferma il codice</button>
-  </section>
-
-  <section class="card">
-    <h2>Controlli</h2>
-    <ol class="passi" id="passi"></ol>
-    <button class="secondo" id="riprova" hidden>Riprova</button>
-  </section>
-
-  <section class="card" id="scheda" hidden>
-    <h2 id="schedaNome"></h2>
-    <p id="schedaTesto"></p>
-    <img class="foto" id="foto" alt="Foto di prova letta da Dropbox" hidden>
-  </section>
-
-  <section class="card" id="pdf" hidden>
-    <h2>Documento PDF</h2>
-    <a class="tasto" id="apriPdf" target="_blank" rel="noopener">Apri il PDF</a>
-    <p style="margin-top:14px">Il PDF si è aperto e si legge bene?</p>
-    <div class="due">
-      <button id="pdfSi">Sì</button>
-      <button class="secondo" id="pdfNo">No</button>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Esito</h2>
-    <p>Quando hai finito, copia l'esito e incollalo nella chat. Non contiene password né codici.</p>
-    <button id="copia">Copia l'esito</button>
-    <pre id="esito" hidden></pre>
-    <button class="secondo" id="scollega" hidden>Scollega Dropbox</button>
-  </section>
-
-  <footer>Prova 1 · © 2026 NF</footer>
-</main>
+<div id="app">
+  <aside id="lato" aria-label="Elenco delle commesse"></aside>
+  <main id="vista"></main>
+  <nav id="schede-app" aria-label="Sezioni" hidden></nav>
+</div>
+<div id="avviso" role="status" hidden></div>
 
 <script>
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
+const VERSIONE = '1.0';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
-const FILE = { dati: '/prova.json', foto: '/prova-foto.jpg', pdf: '/prova.pdf' };
+const ATTESA_CONTROLLO = 2 * 60 * 1000;
+const DURATA_LINK = 3.5 * 3600 * 1000;
 
+const ICONE = {
+  commesse: '<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>',
+  scadenze: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.2"/>',
+  cerca: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  indietro: '<path d="M15 18l-6-6 6-6"/>',
+  avanti: '<path d="M9 18l6-6-6-6"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  spunta: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  telefono: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
+  luogo: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8.5 16.5h7M8.5 13h7"/>',
+  immagine: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  aggiorna: '<path d="M4 12a8 8 0 1 0 2.3-5.6L4 8.5"/><path d="M4 4v4.5h4.5"/>',
+};
+
+const SCHEDE = [
+  { id: 'generale', nome: 'Generale' },
+  { id: 'scadenze', nome: 'Scadenze', conta: c => attivitaDi(c).filter(x => !x.a.fatto).length },
+  { id: 'pratiche', nome: 'Pratiche', conta: c => c.pratiche.length },
+  { id: 'imprese', nome: 'Imprese', conta: c => c.imprese.length },
+  { id: 'fornitori', nome: 'Fornitori', conta: c => c.fornitori.length },
+  { id: 'prodotti', nome: 'Prodotti', conta: c => c.prodotti.length },
+  { id: 'sopralluoghi', nome: 'Sopralluoghi', conta: c => c.sopralluoghi.length },
+  { id: 'riunioni', nome: 'Report', conta: c => c.riunioni.length },
+  { id: 'verbali', nome: 'Verbali CSE', conta: c => c.verbali.length },
+];
+const STATI_PRATICA = { preparazione: ['In preparazione', '#7b8794'], presentata: ['Presentata', '#3d6fb6'], integrazioni: ['Integrazioni', '#c98a1b'], autorizzata: ['Autorizzata', '#4f8a3c'], respinta: ['Respinta', '#b8433a'], chiusa: ['Chiusa', '#4d6a82'] };
+const STATI_PRODOTTO = { valutare: ['Da valutare', '#c98a1b'], confermato: ['Confermato', '#4f8a3c'], scartato: ['Scartato', '#7b8794'] };
+const GRAVITA = { lieve: 'Lieve', media: 'Media', grave: 'Grave' };
+const ESITI = { si: ['✓', 'Conforme'], no: ['✗', 'Non conforme'], na: ['–', 'Non pertinente'] };
+const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+// ------------------------------------------------------------ strumenti
 const $ = id => document.getElementById(id);
 
-// Il telefono può negare la memoria: la pagina deve funzionare lo stesso.
+function h(tag, attributi, ...figli) {
+  const parti = tag.split('.');
+  const el = document.createElement(parti[0] || 'div');
+  if (parti.length > 1) el.className = parti.slice(1).join(' ');
+  if (attributi instanceof Node || typeof attributi !== 'object' || Array.isArray(attributi) || attributi === null) { figli.unshift(attributi); attributi = {}; }
+  for (const [k, v] of Object.entries(attributi)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'colore') el.style.setProperty('--c', v);
+    else if (k === 'value' || k === 'open') el[k] = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  metti(el, figli);
+  return el;
+}
+function metti(el, figli) {
+  for (const f of figli.flat(Infinity)) {
+    if (f == null || f === false || f === true || f === '') continue;
+    el.append(f instanceof Node ? f : String(f));
+  }
+}
+function cambia(el, ...figli) { el.replaceChildren(); metti(el, figli); }
+
+function icona(nome) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('class', 'ic');
+  s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = ICONE[nome] || ICONE.info;
+  return s;
+}
+
+const due = n => String(n).padStart(2, '0');
+function dataDa(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null;
+}
+function giorniDa(s) {
+  const d = dataDa(s); if (!d) return null;
+  const a = new Date(); a.setHours(0, 0, 0, 0);
+  const b = new Date(d); b.setHours(0, 0, 0, 0);
+  return Math.round((b - a) / 86400000);
+}
+const dataIT = s => { const d = dataDa(s); return d ? `${due(d.getDate())}/${due(d.getMonth() + 1)}/${d.getFullYear()}` : ''; };
+function dataBreve(s) {
+  const d = dataDa(s); if (!d) return '';
+  const g = giorniDa(s);
+  if (g === 0) return 'oggi'; if (g === 1) return 'domani'; if (g === -1) return 'ieri';
+  return `${d.getDate()} ${MESI[d.getMonth()]}` + (Math.abs(g) > 300 ? ' ' + d.getFullYear() : '');
+}
+function momento(ms) {
+  const d = new Date(ms), oggi = new Date();
+  const ora = `${due(d.getHours())}:${due(d.getMinutes())}`;
+  return d.toDateString() === oggi.toDateString() ? `oggi alle ${ora}` : `il ${d.getDate()} ${MESI[d.getMonth()]} alle ${ora}`;
+}
+function euro(n) {
+  const [intero, decimali] = (Number(n) || 0).toFixed(2).split('.');
+  return `${intero.replace(/\B(?=(\d{3})+$)/g, '.')},${decimali} €`;
+}
+const minuscolo = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// I testi formattati del Mac diventano testo semplice: qui si leggono soltanto.
+function testoPiano(s) {
+  const t = String(s ?? '');
+  if (!/<[a-z][^>]*>/i.test(t)) return t.trim();
+  const doc = new DOMParser().parseFromString(t, 'text/html');
+  doc.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+  doc.querySelectorAll('li').forEach(l => l.prepend('• '));
+  doc.querySelectorAll('p,div,li,h1,h2,h3').forEach(b => b.append('\n'));
+  return doc.body.textContent.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// ------------------------------------------------------------ memoria del telefono
 const mem = {
   leggi(k) { try { return localStorage.getItem('cm_' + k); } catch (e) { return null; } },
   scrivi(k, v) { try { localStorage.setItem('cm_' + k, v); return true; } catch (e) { return false; } },
   togli(k) { try { localStorage.removeItem('cm_' + k); } catch (e) {} },
 };
 
-const PASSI = [
-  ['home', "Aperta dall'icona sulla Home"],
-  ['accesso', 'Collegamento a Dropbox'],
-  ['riapertura', 'Riapertura senza nuovo accesso'],
-  ['dati', 'Lettura dei dati'],
-  ['foto', 'Foto da Dropbox'],
-  ['pdf', 'Apertura del PDF'],
-  ['offline', 'Testo disponibile senza rete'],
-];
-const stato = {};
+const archivio = {
+  db: null,
+  apri() {
+    return this.db ||= new Promise((fatto, errore) => {
+      const r = indexedDB.open('commesse', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('dati');
+      r.onsuccess = () => fatto(r.result);
+      r.onerror = () => errore(r.error);
+    });
+  },
+  async fai(modo, azione) {
+    const db = await this.apri();
+    return new Promise((fatto, errore) => {
+      const t = db.transaction('dati', modo);
+      const r = azione(t.objectStore('dati'));
+      t.oncomplete = () => fatto(r.result);
+      t.onerror = t.onabort = () => errore(t.error);
+    });
+  },
+  leggi(k) { return this.fai('readonly', s => s.get(k)).catch(() => null); },
+  scrivi(k, v) { return this.fai('readwrite', s => s.put(v, k)).catch(() => {}); },
+  togli(k) { return this.fai('readwrite', s => s.delete(k)).catch(() => {}); },
+  svuota() { return this.fai('readwrite', s => s.clear()).catch(() => {}); },
+};
 
-function segna(id, esito, dettaglio) {
-  stato[id] = { esito, dettaglio: dettaglio || '' };
-  mem.scrivi('esiti', JSON.stringify(stato));
-  disegna();
+// ------------------------------------------------------------ stato
+const DATI = { indice: null, schede: new Map() };
+const UI = { cerca: '', filtro: 'tutte', aperti: new Set(), scorrimenti: new Map(), aggiornamento: 'attesa', controllato: 0, inCorso: false, errore: '' };
+const stretto = () => !matchMedia('(min-width: 820px)').matches;
+
+function rotta() {
+  const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (p[0] === 'c') return { vista: 'commessa', id: p[1], scheda: p[2] || 'generale', voce: p[3] };
+  if (p[0] === 'scadenze' || p[0] === 'info') return { vista: p[0] };
+  return { vista: 'elenco' };
+}
+const vai = percorso => { location.hash = '#/' + percorso; };
+
+let timerAvviso;
+function avviso(testo) {
+  const a = $('avviso');
+  a.textContent = testo; a.hidden = false;
+  clearTimeout(timerAvviso);
+  timerAvviso = setTimeout(() => { a.hidden = true; }, 2600);
 }
 
-function disegna() {
-  const lista = $('passi');
-  lista.textContent = '';
-  for (const [id, titolo] of PASSI) {
-    const s = stato[id] || { esito: 'attesa', dettaglio: '' };
-    const li = document.createElement('li');
-    li.className = s.esito;
-    const segno = document.createElement('span');
-    segno.className = 'segno';
-    segno.textContent = s.esito === 'ok' ? '✓' : s.esito === 'errore' ? '!' : '·';
-    const testo = document.createElement('div');
-    const t = document.createElement('div');
-    t.className = 'titolo';
-    t.textContent = titolo;
-    testo.append(t);
-    if (s.dettaglio) {
-      const d = document.createElement('div');
-      d.className = 'dettaglio';
-      d.textContent = s.dettaglio;
-      testo.append(d);
-    }
-    li.append(segno, testo);
-    lista.append(li);
-  }
-}
+// ------------------------------------------------------------ accesso a Dropbox
+const base64url = byte => btoa(String.fromCharCode(...byte)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+let accessoAttuale = null;
 
-// ------------------------------------------------------------ accesso
-const base64url = byte => btoa(String.fromCharCode(...byte))
-  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-async function preparaAccesso() {
+async function urlAccesso() {
   let verifica = mem.leggi('verifica');
   if (!verifica) {
     verifica = base64url(crypto.getRandomValues(new Uint8Array(48)));
@@ -190,8 +366,7 @@ async function preparaAccesso() {
     client_id: APP_KEY, response_type: 'code', token_access_type: 'offline',
     code_challenge: base64url(new Uint8Array(impronta)), code_challenge_method: 'S256', scope: PERMESSI,
   });
-  $('apriLogin').href = 'https://www.dropbox.com/oauth2/authorize?' + p;
-  $('accesso').hidden = false;
+  return 'https://www.dropbox.com/oauth2/authorize?' + p;
 }
 
 async function chiediToken(campi) {
@@ -205,49 +380,18 @@ async function chiediToken(campi) {
   return j;
 }
 
-async function confermaCodice() {
-  const code = $('codice').value.trim();
-  if (!code) { segna('accesso', 'errore', 'Incolla prima il codice di Dropbox.'); return; }
-  $('conferma').disabled = true;
-  try {
-    const j = await chiediToken({
-      grant_type: 'authorization_code', code, client_id: APP_KEY, code_verifier: mem.leggi('verifica') || '',
-    });
-    if (!j.refresh_token) throw new Error('Dropbox non ha dato il permesso permanente.');
-    if (!mem.scrivi('collegamento', j.refresh_token)) throw new Error('Il telefono non permette di salvare il collegamento.');
-    accessoAttuale = { valore: j.access_token, fine: Date.now() + (j.expires_in - 60) * 1000 };
-    mem.togli('verifica');
-    mem.scrivi('aperture', '0');
-    $('accesso').hidden = true;
-    $('scollega').hidden = false;
-    segna('accesso', 'ok', 'Collegata alla cartella dedicata.');
-    segna('riapertura', 'attesa', "Chiudi del tutto la webapp e riaprila dall'icona.");
-    await leggiTutto();
-  } catch (e) {
-    segna('accesso', 'errore', testoErrore(e));
-  } finally {
-    $('conferma').disabled = false;
-  }
-}
-
-let accessoAttuale = null;
 async function token() {
   if (accessoAttuale && Date.now() < accessoAttuale.fine) return accessoAttuale.valore;
-  const j = await chiediToken({
-    grant_type: 'refresh_token', refresh_token: mem.leggi('collegamento') || '', client_id: APP_KEY,
-  });
+  const j = await chiediToken({ grant_type: 'refresh_token', refresh_token: mem.leggi('collegamento') || '', client_id: APP_KEY });
   accessoAttuale = { valore: j.access_token, fine: Date.now() + (j.expires_in - 60) * 1000 };
   return accessoAttuale.valore;
 }
 
-// ------------------------------------------------------------ Dropbox
 async function erroreDropbox(r) {
   const t = await r.text().catch(() => '');
   let motivo = t.slice(0, 200);
   try { motivo = JSON.parse(t).error_summary || motivo; } catch (e) {}
-  const err = new Error(motivo || 'Risposta ' + r.status);
-  err.stato = r.status;
-  return err;
+  return new Error(motivo || 'Risposta ' + r.status);
 }
 
 async function chiama(percorso, corpo) {
@@ -261,165 +405,632 @@ async function chiama(percorso, corpo) {
 }
 
 // Nell'intestazione le lettere accentate vanno scritte in forma \uXXXX.
-const intestazione = o => JSON.stringify(o)
-  .replace(/[\u007f-￿]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const intestazione = o => JSON.stringify(o).replace(/[\u007f-￿]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 
-async function scarica(path) {
-  const r = await fetch(CONTENUTI + '/2/files/download', {
+async function contenuto(percorso, argomento) {
+  const r = await fetch(CONTENUTI + percorso, {
     method: 'POST',
-    headers: { Authorization: 'Bearer ' + await token(), 'Dropbox-API-Arg': intestazione({ path }) },
+    headers: { Authorization: 'Bearer ' + await token(), 'Dropbox-API-Arg': intestazione(argomento) },
   });
   if (!r.ok) throw await erroreDropbox(r);
   return r.blob();
 }
-
-function testoErrore(e) {
-  const m = String(e && e.message || e);
-  if (/missing_scope/.test(m)) return 'Manca un permesso nelle impostazioni dell\'app su Dropbox. (' + m + ')';
-  if (/not_found/.test(m)) return 'File non ancora presente nella cartella dedicata.';
-  if (/invalid_grant|code doesn't exist|expired/i.test(m)) return 'Codice non valido o scaduto: apri di nuovo Dropbox e riprova. (' + m + ')';
-  if (e instanceof TypeError) return 'Connessione non riuscita. (' + m + ')';
-  return m;
-}
-
+const scarica = path => contenuto('/2/files/download', { path });
 const senzaRete = e => !navigator.onLine || e instanceof TypeError;
 
-// ------------------------------------------------------------ lettura
-function mostraScheda(d, salvato) {
-  $('schedaNome').textContent = d.nome || 'Scheda senza nome';
-  $('schedaTesto').textContent = [d.cliente, d.cantiere, d.nota].filter(Boolean).join(' · ')
-    + (salvato ? ' (copia salvata sul telefono)' : '');
-  $('scheda').hidden = false;
+// ------------------------------------------------------------ aggiornamento dei dati
+async function caricaDalTelefono() {
+  DATI.indice = (await archivio.leggi('indice')) || null;
+  UI.controllato = (await archivio.leggi('controllato')) || 0;
+  for (const v of DATI.indice?.commesse || []) {
+    const s = await archivio.leggi('c:' + v.id);
+    if (s) DATI.schede.set(v.id, completa(s));
+  }
 }
 
-function mostraSalvati(motivo) {
-  const salvato = mem.leggi('dati');
-  if (!salvato) { segna('offline', 'errore', 'Nessun dato salvato sul telefono. ' + motivo); return false; }
-  mostraScheda(JSON.parse(salvato), true);
-  segna('offline', 'ok', 'Scheda letta dal telefono, senza Dropbox.');
-  return true;
+function completa(c) {
+  for (const k of ['catasto', 'attivita', 'pratiche', 'imprese', 'fornitori', 'prodotti', 'sopralluoghi', 'riunioni', 'verbali']) c[k] ||= [];
+  c.cliente ||= {}; c.cantiere ||= {};
+  return c;
 }
 
-async function leggiTutto() {
-  $('riprova').hidden = true;
-  let elenco;
+async function aPezzi(voci, quanti, lavoro) {
+  const coda = [...voci];
+  await Promise.all(Array.from({ length: quanti }, async () => {
+    while (coda.length) await lavoro(coda.shift());
+  }));
+}
+
+async function aggiorna({ manuale = false } = {}) {
+  if (UI.inCorso) return;
+  UI.inCorso = true;
+  UI.aggiornamento = 'corso';
+  disegnaStato();
+  let cambiato = false;
   try {
-    elenco = await chiama('/2/files/list_folder', { path: '' });
+    const nuovo = JSON.parse(await (await scarica('/indice.json')).text());
+    const vecchie = new Map((DATI.indice?.commesse || []).map(v => [v.id, v.firma]));
+    const daPrendere = nuovo.commesse.filter(v => vecchie.get(v.id) !== v.firma || !DATI.schede.has(v.id));
+    await aPezzi(daPrendere, 4, async v => {
+      try {
+        const s = completa(JSON.parse(await (await scarica(`/commesse/${v.id}.json`)).text()));
+        DATI.schede.set(v.id, s);
+        await archivio.scrivi('c:' + v.id, s);
+        cambiato = true;
+      } catch (e) {
+        if (!/not_found/.test(e.message)) throw e;     // sparita nel frattempo: la riprende il prossimo controllo
+      }
+    });
+    const presenti = new Set(nuovo.commesse.map(v => v.id));
+    for (const id of [...DATI.schede.keys()]) {
+      if (!presenti.has(id)) { DATI.schede.delete(id); await archivio.togli('c:' + id); cambiato = true; }
+    }
+    cambiato ||= DATI.indice?.firma !== nuovo.firma;
+    DATI.indice = nuovo;
+    await archivio.scrivi('indice', nuovo);
+    UI.controllato = Date.now();
+    await archivio.scrivi('controllato', UI.controllato);
+    UI.aggiornamento = 'ok';
   } catch (e) {
-    $('riprova').hidden = false;
-    if (senzaRete(e)) { mostraSalvati(testoErrore(e)); return; }
     if (e.rifiutato) {
-      mem.togli('collegamento');
-      segna('accesso', 'errore', 'Il collegamento non è più valido: accedi di nuovo. (' + e.message + ')');
-      await preparaAccesso();
+      mem.togli('collegamento'); accessoAttuale = null; UI.inCorso = false;
+      schermataAccesso('Il collegamento a Dropbox non è più valido: accedi di nuovo.');
       return;
     }
-    segna('dati', 'errore', testoErrore(e));
-    return;
+    if (/not_found/.test(e.message)) UI.aggiornamento = 'attesaMac';
+    else if (senzaRete(e)) UI.aggiornamento = 'senzaRete';
+    else { UI.aggiornamento = 'errore'; UI.errore = e.message; }
+    if (manuale && UI.aggiornamento === 'senzaRete') avviso('Senza rete: restano i dati salvati sul telefono');
   }
-  const presenti = elenco.entries.length;
-  if (!presenti) {
-    segna('dati', 'errore', 'La cartella dedicata è ancora vuota: avvisa Claude, poi tocca Riprova.');
-    $('riprova').hidden = false;
-    return;
-  }
-  try {
-    const d = JSON.parse(await (await scarica(FILE.dati)).text());
-    mem.scrivi('dati', JSON.stringify(d));
-    mostraScheda(d, false);
-    segna('dati', 'ok', presenti + ' file nella cartella dedicata. Scheda letta da Dropbox.');
-    if (!(stato.offline && stato.offline.esito === 'ok')) {
-      segna('offline', 'attesa', "Metti l'iPhone in modalità aereo, chiudi e riapri dall'icona.");
-    }
-  } catch (e) {
-    segna('dati', 'errore', testoErrore(e));
-    $('riprova').hidden = false;
-  }
-  try {
-    const blob = await scarica(FILE.foto);
-    const img = $('foto');
-    await new Promise((fatto, errore) => {
-      img.onload = fatto;
-      img.onerror = () => errore(new Error('Il telefono non riesce a mostrare la foto.'));
-      img.src = URL.createObjectURL(blob);
-    });
-    img.hidden = false;
-    segna('foto', 'ok', Math.round(blob.size / 1024) + ' KB scaricati.');
-  } catch (e) {
-    segna('foto', 'errore', testoErrore(e));
-    $('riprova').hidden = false;
-  }
-  try {
-    const j = await chiama('/2/files/get_temporary_link', { path: FILE.pdf });
-    $('apriPdf').href = j.link;
-    $('pdf').hidden = false;
-  } catch (e) {
-    segna('pdf', 'errore', testoErrore(e));
-    $('riprova').hidden = false;
-  }
+  UI.inCorso = false;
+  if (cambiato || !DATI.indice) disegna(); else disegnaStato();
 }
 
-// ------------------------------------------------------------ esito
-function testoEsito() {
-  const righe = PASSI.map(([id, titolo]) => {
-    const s = stato[id] || { esito: 'attesa', dettaglio: '' };
-    return `${s.esito.toUpperCase()} - ${titolo}${s.dettaglio ? ': ' + s.dettaglio : ''}`;
+// ------------------------------------------------------------ dati derivati
+const nomeSoggetto = x => x.contatto?.nome || x.nome || 'Senza nome';
+
+function attivitaDi(c) {
+  const out = [];
+  const add = (lista, origine, scheda, rif, sicurezza = false) => (lista || []).forEach(a => { if (a.testo) out.push({ a, c, origine, scheda, rif, sicurezza }); });
+  add(c.attivita, 'Commessa', 'scadenze');
+  c.pratiche.forEach(p => add(p.incombenze, `Pratica ${p.tipologia || ''}`.trim(), 'pratiche', p.id));
+  c.imprese.forEach(i => add(i.note, nomeSoggetto(i), 'imprese', i.id));
+  c.fornitori.forEach(f => add(f.note, nomeSoggetto(f), 'fornitori', f.id));
+  c.sopralluoghi.forEach(s => add(s.dafare, `Sopralluogo ${dataIT(s.data)}`, 'sopralluoghi', s.id));
+  c.riunioni.forEach(r => add(r.dafare, `Report ${dataIT(r.data)}`, 'riunioni', r.id));
+  c.verbali.forEach(v => {
+    add(v.dafare, `Verbale CSE n. ${v.numero || ''}`, 'verbali', v.id, true);
+    add(v.nc, `Non conformità · verbale CSE n. ${v.numero || ''}`, 'verbali', v.id, true);
   });
-  righe.push('Telefono: ' + navigator.userAgent);
-  return 'Prova 1\n' + righe.join('\n');
+  return out;
+}
+const ordinaPerData = (a, b) => (a.a.scadenza || '9999').localeCompare(b.a.scadenza || '9999');
+const voceIndice = id => DATI.indice?.commesse.find(v => v.id === id);
+const colonnaDi = v => (DATI.indice?.colonne || []).find(k => k.id === v.colonna);
+
+// ------------------------------------------------------------ pezzi di interfaccia
+const pillola = (testo, colore) => h('span.pillola', { colore }, testo);
+const dato = (etichetta, valore) => {
+  const v = valore instanceof Node ? valore : testoPiano(valore);
+  return v ? h('div.dato', h('span', etichetta), h('div', v)) : null;
+};
+const nulla = (titolo, testo) => h('div.vuoto', h('b', titolo), testo);
+
+function voce(id, titolo, sotto, pillole, ...corpo) {
+  const d = h('details.voce', { id: 'voce-' + id, open: UI.aperti.has(id) },
+    h('summary',
+      h('div', h('span.voce-titolo', titolo), sotto && h('span.voce-sotto', sotto), pillole && h('div.pillole', pillole)),
+      h('span.freccia', icona('avanti'))),
+    h('div.corpo', corpo));
+  d.addEventListener('toggle', () => { d.open ? UI.aperti.add(id) : UI.aperti.delete(id); });
+  return d;
 }
 
-async function copiaEsito() {
-  const testo = testoEsito();
-  const box = $('esito');
-  box.textContent = testo;
-  box.hidden = false;
-  try {
-    await navigator.clipboard.writeText(testo);
-    $('copia').textContent = 'Esito copiato';
-  } catch (e) {
-    $('copia').textContent = 'Seleziona il testo qui sotto e copialo';
+function rigaAttivita(x, conCommessa = false) {
+  const { a } = x;
+  const g = a.scadenza ? giorniDa(a.scadenza) : null;
+  return h('button.attivita' + (a.fatto ? '.fatta' : ''), { onclick: () => vai(`c/${x.c.id}/${x.scheda}${x.rif ? '/' + x.rif : ''}`) },
+    h('div', h('b', a.testo),
+      h('small', [conCommessa ? x.c.nome : null, x.origine].filter(Boolean).join(' · ')),
+      a.gravita && h('small', 'Gravità: ' + (GRAVITA[a.gravita] || a.gravita))),
+    h('span.quando' + (!a.fatto && g != null && g < 0 ? '.scaduta' : ''), a.scadenza ? dataBreve(a.scadenza) : ''));
+}
+
+function elencoAttivita(lista) {
+  const voci = (lista || []).filter(a => a.testo);
+  if (!voci.length) return null;
+  return h('div', [...voci].sort((a, b) => Number(!!a.fatto) - Number(!!b.fatto) || (a.scadenza || '9999').localeCompare(b.scadenza || '9999')).map(a => {
+    const g = a.scadenza ? giorniDa(a.scadenza) : null;
+    return h('div.attivita' + (a.fatto ? '.fatta' : ''),
+      h('div', h('b', a.testo), a.gravita && h('small', 'Gravità: ' + (GRAVITA[a.gravita] || a.gravita))),
+      h('span.quando' + (!a.fatto && g != null && g < 0 ? '.scaduta' : ''), a.scadenza ? dataBreve(a.scadenza) : ''));
+  }));
+}
+
+const etichette = lista => (lista || []).length
+  ? h('div.etichette', lista.map(e => h('span.etichetta' + (e.fatto ? '.fatta' : ''), e.fatto && icona('spunta'), e.testo))) : null;
+
+// ------------------------------------------------------------ foto e documenti
+const miniature = new Map();
+const collegamenti = new Map();
+const osservatore = new IntersectionObserver(voci => {
+  for (const v of voci) {
+    if (!v.isIntersecting) continue;
+    osservatore.unobserve(v.target);
+    v.target._quandoVisibile?.();
+  }
+}, { rootMargin: '200px' });
+const quandoVisibile = (el, fn) => { el._quandoVisibile = fn; osservatore.observe(el); return el; };
+
+function miniatura(f) {
+  if (!miniature.has(f.copia)) {
+    const path = '/' + f.copia;
+    miniature.set(f.copia, contenuto('/2/files/get_thumbnail_v2', {
+      resource: { '.tag': 'path', path }, format: 'jpeg', size: 'w480h320', mode: 'fitone_bestfit',
+    }).catch(() => scarica(path)).then(b => URL.createObjectURL(b)).catch(e => { miniature.delete(f.copia); throw e; }));
+  }
+  return miniature.get(f.copia);
+}
+
+function immagine(f, tag) {
+  const box = h(tag, icona('immagine'));
+  if (!f.copia) return box;
+  return quandoVisibile(box, async () => {
+    try { box.append(h('img', { alt: f.didascalia || f.nome, src: await miniatura(f) })); }
+    catch (e) { /* senza rete resta il segnaposto */ }
+  });
+}
+
+function apriFoto(lista, indice) {
+  const vista = h('div.scorri');
+  const nota = h('div');
+  const mostra = async i => {
+    indice = (i + lista.length) % lista.length;
+    const f = lista[indice];
+    cambia(nota, f.didascalia || dataIT(f.scatto) || f.nome, lista.length > 1 && ` (${indice + 1}/${lista.length})`);
+    cambia(vista);
+    try {
+      const url = URL.createObjectURL(await scarica('/' + f.copia));
+      if (lista[indice] === f) cambia(vista, h('img', { src: url, alt: f.didascalia || f.nome }));
+    } catch (e) {
+      cambia(vista, 'Per vedere la foto serve la rete');
+    }
+  };
+  const visore = h('div', { id: 'visore', role: 'dialog', 'aria-label': 'Foto' },
+    h('header', h('button', { onclick: () => visore.remove(), 'aria-label': 'Chiudi' }, icona('x'))),
+    vista,
+    h('footer',
+      lista.length > 1 ? h('button', { onclick: () => mostra(indice - 1), 'aria-label': 'Foto precedente' }, icona('indietro')) : h('span'),
+      nota,
+      lista.length > 1 ? h('button', { onclick: () => mostra(indice + 1), 'aria-label': 'Foto successiva' }, icona('avanti')) : h('span')));
+  document.body.append(visore);
+  mostra(indice);
+}
+
+function griglia(foto) {
+  const utili = (foto || []).filter(f => f.copia);
+  if (!utili.length) return null;
+  return h('div.foto-griglia', utili.map((f, i) => {
+    const b = immagine(f, 'button.foto-tasto');
+    b.setAttribute('aria-label', 'Apri la foto ' + (f.didascalia || f.nome));
+    b.addEventListener('click', () => apriFoto(utili, i));
+    return b;
+  }));
+}
+
+async function collegamentoDi(f) {
+  const c = collegamenti.get(f.copia);
+  if (c && Date.now() - c.quando < DURATA_LINK) return c.link;
+  const j = await chiama('/2/files/get_temporary_link', { path: '/' + f.copia });
+  collegamenti.set(f.copia, { link: j.link, quando: Date.now() });
+  return j.link;
+}
+
+// Il link temporaneo si prepara appena il documento è visibile: iOS apre una nuova vista solo con un tocco diretto su un link.
+function documento(f) {
+  const nomeIcona = f.tipo === 'pdf' ? 'pdf' : 'file';
+  if (!f.copia) {
+    return h('div.documento.spento', icona(nomeIcona), h('span', f.nome,
+      h('small', f.troppoGrande ? 'Troppo grande per il telefono' : 'Non disponibile: il file non è stato trovato sul Mac')));
+  }
+  let pronto = 0;
+  const prepara = async () => {
+    try { a.href = await collegamentoDi(f); pronto = Date.now(); } catch (e) { /* si riprova al tocco */ }
+  };
+  const a = h('a.documento', { target: '_blank', rel: 'noopener', onclick: e => {
+    if (!navigator.onLine) { e.preventDefault(); avviso('Per aprire i documenti serve la rete'); return; }
+    if (!pronto || Date.now() - pronto > DURATA_LINK) { e.preventDefault(); avviso('Un attimo: preparo il documento, poi tocca di nuovo'); prepara(); }
+  } }, icona(nomeIcona), h('span', f.nome));
+  return quandoVisibile(a, prepara);
+}
+
+function file(lista, extra) {
+  const tutti = [...(lista || []), ...(extra ? [extra] : [])];
+  if (!tutti.length) return null;
+  const documenti = tutti.filter(f => f.tipo !== 'foto');
+  return [griglia(tutti.filter(f => f.tipo === 'foto')), documenti.length > 0 && h('div', documenti.map(documento))];
+}
+const sezione = (titolo, ...contenuti) => contenuti.flat(Infinity).some(Boolean) ? [h('div.sezione', titolo), contenuti] : null;
+
+// ------------------------------------------------------------ schede
+function schedaGenerale(c) {
+  const cl = c.cliente, ca = c.cantiere;
+  const indirizzo = [ca.indirizzo, ca.comune].filter(Boolean).join(', ');
+  const prossime = attivitaDi(c).filter(x => !x.a.fatto).sort(ordinaPerData).slice(0, 5);
+  const link = (href, testo) => h('a', { href }, testo);
+  return [
+    h('section.card', h('h3', 'Cliente'),
+      dato('Nome', cl.nome), dato('Codice fiscale', cl.cf), dato('Partita IVA', cl.piva), dato('Indirizzo', cl.indirizzo),
+      cl.email && dato('Email', link('mailto:' + cl.email, cl.email)), cl.pec && dato('PEC', link('mailto:' + cl.pec, cl.pec)),
+      cl.telefono && dato('Telefono', link('tel:' + cl.telefono.replace(/\s/g, ''), cl.telefono)), dato('Note', cl.note),
+      cl.respLavori && dato('Ruolo', 'È anche Responsabile dei lavori')),
+    h('section.card', h('h3', 'Cantiere'),
+      dato('Indirizzo', ca.indirizzo), dato('Comune', ca.comune), dato('Piano / interno', ca.piano),
+      dato('Inizio lavori', dataIT(ca.inizioLavori)), dato('Accesso e chiavi', ca.note),
+      indirizzo && h('div.azioni', h('a.tasto', { href: 'https://maps.apple.com/?q=' + encodeURIComponent(indirizzo), target: '_blank', rel: 'noopener' }, icona('luogo'), 'Apri in Mappe'))),
+    c.catasto.length > 0 && h('section.card', h('h3', 'Dati catastali'), c.catasto.map(r => dato(`${r.tipo || 'Immobile'}${r.comune ? ' · ' + r.comune : ''}`,
+      [r.sezione && 'Sez. ' + r.sezione, r.foglio && 'Fg. ' + r.foglio, r.mappale && 'Mapp. ' + r.mappale, r.sub && 'Sub ' + r.sub, r.categoria, r.classe && 'Cl. ' + r.classe, r.consistenza, r.rendita && 'Rendita ' + r.rendita + ' €'].filter(Boolean).join(' · ')))),
+    testoPiano(c.note) && h('section.card', h('h3', 'Note della commessa'), h('div.dato', h('div', testoPiano(c.note)))),
+    prossime.length > 0 && h('section.card', h('h3', 'Prossime cose da fare'), prossime.map(x => rigaAttivita(x))),
+  ];
+}
+
+function schedaScadenzeCommessa(c) {
+  const tutte = attivitaDi(c);
+  const aperte = tutte.filter(x => !x.a.fatto).sort(ordinaPerData);
+  const fatte = tutte.filter(x => x.a.fatto);
+  if (!tutte.length) return nulla('Nessuna scadenza', 'Le cose da fare di questa commessa compaiono qui.');
+  return [
+    aperte.length ? h('section.card', aperte.map(x => rigaAttivita(x))) : nulla('Tutto fatto', 'Nessuna cosa da fare aperta.'),
+    fatte.length > 0 && voce('fatte-' + c.id, `Fatte (${fatte.length})`, '', null, fatte.map(x => rigaAttivita(x))),
+  ];
+}
+
+function schedaPratiche(c) {
+  if (!c.pratiche.length) return nulla('Nessuna pratica', 'Le pratiche inserite sul Mac compaiono qui.');
+  return c.pratiche.map(p => {
+    const [nome, colore] = STATI_PRATICA[p.stato] || STATI_PRATICA.preparazione;
+    const o = p.oneri || {};
+    const totale = (Number(o.marche) || 0) * 16 + (Number(o.diritti) || 0);
+    return voce(p.id, p.tipologia || 'Pratica',
+      [p.ente, p.protocollo && `prot. ${p.protocollo}`, p.dataProtocollo && `del ${dataIT(p.dataProtocollo)}`].filter(Boolean).join(' · ') || 'Non ancora presentata',
+      [pillola(nome, colore), p.dataOttenuta && pillola('Autorizzata il ' + dataIT(p.dataOttenuta), '#4f8a3c'), !p.dataOttenuta && p.dataStimata && pillola('Stima ' + dataIT(p.dataStimata), '#3d6fb6')],
+      dato('Oggetto', p.oggetto), dato('N. protocollo autorizzazione', p.protocolloAutorizzazione), dato('Note', p.note),
+      totale > 0 && dato('Oneri', [euro(totale), o.marche && `${o.marche} marche da bollo`, Number(o.diritti) > 0 && 'diritti ' + euro(o.diritti),
+        o.carico === 'cliente' && 'a carico del cliente', o.carico === 'anticipati' && (o.rimborsato ? 'anticipati, rimborsati' : 'anticipati, da rimborsare')].filter(Boolean).join(' · ')),
+      sezione('Incombenze', elencoAttivita(p.incombenze)),
+      sezione('Documenti', file(p.file)));
+  });
+}
+
+function schedaSoggetti(c, tipo) {
+  const lista = tipo === 'imprese' ? c.imprese : c.fornitori;
+  if (!lista.length) return nulla(tipo === 'imprese' ? 'Nessuna impresa' : 'Nessun fornitore', 'Quelli aggiunti sul Mac compaiono qui.');
+  return lista.map(x => {
+    const k = x.contatto || {};
+    const fasi = x.fasi || [];
+    const fatte = fasi.filter(e => e.fatto).length;
+    const prossima = fasi.find(e => !e.fatto);
+    const numeri = [[k.cellulare, 'Cellulare'], [k.telefono, 'Telefono']].filter(n => n[0]);
+    const prodotti = tipo === 'fornitori' ? c.prodotti.filter(p => p.fornitoreId === x.id) : [];
+    return voce(x.id, nomeSoggetto(x), [x.categoria || k.categoria, k.referente].filter(Boolean).join(' · '),
+      fasi.length > 0 && pillola(`${fatte}/${fasi.length} fasi${prossima ? ' · prossima: ' + prossima.testo : ''}`, fatte === fasi.length ? '#4f8a3c' : '#4d6a82'),
+      numeri.length + (k.email ? 1 : 0) > 0 && h('div.azioni',
+        numeri.map(([n, t]) => h('a.tasto', { href: 'tel:' + n.replace(/\s/g, '') }, icona('telefono'), t)),
+        k.email && h('a.tasto', { href: 'mailto:' + k.email }, icona('mail'), 'Email')),
+      dato('Referente', k.referente), dato('Cellulare', k.cellulare), dato('Telefono', k.telefono), dato('Email', k.email), dato('PEC', k.pec),
+      dato('Partita IVA', k.piva), dato('Indirizzo', k.indirizzo), dato('Sito', k.sito), dato('Note in rubrica', k.note),
+      Number(x.importo) > 0 && dato('Importo', [euro(x.importo), Number(x.perc) > 0 && `${x.perc}%`].filter(Boolean).join(' · ')),
+      Number(x.avanzamento) > 0 && dato('Avanzamento', `${x.avanzamento}%`),
+      sezione('Fase lavorativa', etichette(fasi)),
+      sezione('Da fare in cantiere', etichette(x.dafare)),
+      sezione('Annotazioni', elencoAttivita(x.note)),
+      sezione('Note', (x.appunti || []).filter(n => testoPiano(n.testo)).map(n => dato(dataIT(n.data) || 'Nota', n.testo))),
+      prodotti.length > 0 && sezione('Prodotti', h('div.etichette', prodotti.map(p => h('span.etichetta', p.nome || 'Senza nome')))));
+  });
+}
+
+function misure(p) {
+  const m = [['L', p.misuraL], ['H', p.misuraH], ['P', p.misuraP]].filter(x => String(x[1] ?? '').trim()).map(x => `${x[0]} ${x[1]}`);
+  return m.length ? m.join(' × ') + ' cm' : '';
+}
+
+function schedaProdotti(c) {
+  if (!c.prodotti.length) return nulla('Nessun prodotto', 'I prodotti inseriti sul Mac compaiono qui.');
+  const gruppi = {};
+  c.prodotti.forEach(p => (gruppi[p.categoria || 'Altro'] ||= []).push(p));
+  return Object.entries(gruppi).map(([categoria, lista]) => [
+    h('div.gruppo', categoria),
+    lista.map(p => {
+      const [stato, colore] = STATI_PRODOTTO[p.stato] || STATI_PRODOTTO.valutare;
+      const foto = (p.file || []).find(f => f.tipo === 'foto' && f.copia);
+      const fornitore = c.fornitori.find(f => f.id === p.fornitoreId);
+      const link = p.link && (/^https?:/.test(p.link) ? p.link : 'https://' + p.link);
+      const titolo = h('div.prodotto', foto ? immagine(foto, 'div.miniatura') : h('div.miniatura', icona('immagine')),
+        h('div', h('span.voce-titolo', p.nome || 'Senza nome'), h('span.voce-sotto', [p.marca, p.codice].filter(Boolean).join(' · ')), h('div.pillole', pillola(stato, colore))));
+      return voce(p.id, titolo, '', null,
+        dato('Ambiente', p.ambiente), dato('Fornitore', fornitore && nomeSoggetto(fornitore)), dato('Misure', misure(p)),
+        p.prezzo !== '' && p.prezzo != null && dato('Prezzo', `${p.quantita || 1} × ${euro(p.prezzo)}`), dato('Note', p.note),
+        link && dato('Sito', h('a', { href: link, target: '_blank', rel: 'noopener' }, p.link)),
+        sezione('Foto e schede tecniche', file(p.file)));
+    }),
+  ]);
+}
+
+const perData = lista => [...lista].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+function schedaSopralluoghi(c) {
+  if (!c.sopralluoghi.length) return nulla('Nessun sopralluogo', 'I sopralluoghi inseriti sul Mac compaiono qui.');
+  return perData(c.sopralluoghi).map(s => {
+    const ditte = (s.ditte || []).map(d => {
+      const i = c.imprese.find(x => x.id === d.id);
+      return i ? `${nomeSoggetto(i)}${d.operai ? ` (${d.operai})` : ''}` : null;
+    }).filter(Boolean).join('\n');
+    return voce(s.id, 'Sopralluogo del ' + dataIT(s.data), [s.fase, s.operai && `${s.operai} operai`, (s.foto || []).length && `${s.foto.length} foto`].filter(Boolean).join(' · '), null,
+      dato('Orario', [s.oraInizio, s.oraFine].filter(Boolean).join(' – ')), dato('Meteo', s.meteo), dato('Ditte presenti', ditte), dato('Fase lavorativa', s.fase),
+      dato('Annotazioni', s.annotazioni), dato('Indicazioni impartite', s.indicazioni), dato('Lavorazioni future', s.future),
+      sezione('Cose da fare', elencoAttivita(s.dafare)),
+      sezione('Foto', griglia(s.foto)),
+      sezione('Documento', file([], s.pdf)));
+  });
+}
+
+function schedaRiunioni(c) {
+  if (!c.riunioni.length) return nulla('Nessun report', 'I report inseriti sul Mac compaiono qui.');
+  return perData(c.riunioni).map(r => voce(r.id, r.titolo || r.tipo || 'Report', [dataIT(r.data), r.ora, r.titolo && r.tipo].filter(Boolean).join(' · '), null,
+    dato('Partecipanti', r.partecipanti), dato('Sintesi', r.sintesi), dato('Decisioni prese', r.decisioni),
+    sezione('Da fare e scadenze', elencoAttivita(r.dafare)),
+    sezione('Allegati', file(r.allegati, r.pdf))));
+}
+
+function schedaVerbali(c) {
+  if (!c.verbali.length) return nulla('Nessun verbale', 'I verbali CSE inseriti sul Mac compaiono qui.');
+  return perData(c.verbali).map(v => {
+    const nc = v.nc || [];
+    const aperte = nc.filter(n => !n.fatto).length;
+    const presenti = (v.presenti || []).filter(p => p.presente).map(p => {
+      const i = c.imprese.find(x => x.id === p.id);
+      return i ? `${nomeSoggetto(i)} · ${p.ruolo}${p.operai ? ` · ${p.operai} operai` : ''}${p.referente ? ` · ${p.referente}` : ''}` : null;
+    }).filter(Boolean).join('\n');
+    const controlli = (v.checklist || []).filter(r => r.esito);
+    return voce(v.id, `Verbale CSE n. ${v.numero || ''}`, dataIT(v.data),
+      [v.sospensione?.attiva && pillola('Sospensione', '#b8433a'), aperte > 0 && pillola(aperte === 1 ? '1 non conformità aperta' : `${aperte} non conformità aperte`, '#b8433a')].filter(Boolean),
+      dato('Orario', [v.oraInizio, v.oraFine].filter(Boolean).join(' – ')), dato('Meteo', v.meteo), dato('Imprese presenti', presenti),
+      dato('Stato del cantiere', v.statoCantiere), dato('Lavorazioni future', v.lavorazioniFuture), dato('Note del CSE', v.noteCSE), dato('Disposizioni', v.disposizioni),
+      v.sospensione?.attiva && dato('Sospensione', v.sospensione.testo || 'Lavori sospesi'), dato('Prossimo sopralluogo', dataIT(v.prossimo) || v.prossimo),
+      sezione('Non conformità', elencoAttivita(nc)),
+      sezione('Da fare', elencoAttivita(v.dafare)),
+      sezione('Verifiche', controlli.map(r => {
+        const [segno, nome] = ESITI[r.esito] || ['·', ''];
+        return h('div.controllo.' + r.esito, h('b', { 'aria-label': nome }, segno), h('span', r.voce));
+      })),
+      sezione('Foto', griglia(v.foto)),
+      sezione('Documento', file([], v.pdf)));
+  });
+}
+
+const CORPI = {
+  generale: schedaGenerale, scadenze: schedaScadenzeCommessa, pratiche: schedaPratiche, imprese: c => schedaSoggetti(c, 'imprese'), fornitori: c => schedaSoggetti(c, 'fornitori'),
+  prodotti: schedaProdotti, sopralluoghi: schedaSopralluoghi, riunioni: schedaRiunioni, verbali: schedaVerbali,
+};
+
+// ------------------------------------------------------------ viste
+function vistaCommessa(r) {
+  const c = DATI.schede.get(r.id), v = voceIndice(r.id);
+  if (!c || !v) return h('div.pagina', nulla('Commessa non trovata', 'Potrebbe essere stata eliminata sul Mac.'));
+  if (r.voce) UI.aperti.add(r.voce);
+  const col = colonnaDi(v);
+  return h('div.pagina',
+    h('header.testa',
+      h('button.indietro', { onclick: () => vai('') }, icona('indietro'), 'Commesse'),
+      h('h2', c.nome),
+      h('p.sottotitolo', [c.codice, col?.nome, v.archiviata && 'Archiviata'].filter(Boolean).join(' · ')),
+      c.descrizione && h('p.sottotitolo', c.descrizione),
+      h('nav.tasti-schede', { 'aria-label': 'Schede della commessa' }, SCHEDE.map(s => {
+        const n = s.conta ? s.conta(c) : 0;
+        return h('button' + (s.id === r.scheda ? '.attiva' : ''), { onclick: () => vai(`c/${c.id}/${s.id}`) }, s.nome, n > 0 && ` ${n}`);
+      }))),
+    h('div', (CORPI[r.scheda] || schedaGenerale)(c)));
+}
+
+function corrisponde(v, q) {
+  if (!q) return true;
+  const s = DATI.schede.get(v.id);
+  const nomi = s ? [...s.imprese, ...s.fornitori].map(nomeSoggetto).join(' ') : '';
+  return minuscolo([v.nome, v.cliente, v.codice, v.indirizzo, v.comune, v.descrizione, nomi].join(' ')).includes(q);
+}
+
+function rigaCommessa(v, attiva) {
+  const s = DATI.schede.get(v.id);
+  const aperte = s ? attivitaDi(s).filter(x => !x.a.fatto) : [];
+  const scadute = aperte.filter(x => x.a.scadenza && giorniDa(x.a.scadenza) < 0).length;
+  return h('button.commessa' + (attiva ? '.attiva' : ''), { colore: v.colore, onclick: () => vai(`c/${v.id}`) },
+    h('span.banda'),
+    h('div', h('b', v.nome || 'Senza nome'), h('small', [v.codice, v.cliente].filter(Boolean).join(' · '))),
+    scadute > 0 ? h('span.conta.rosso', { 'aria-label': scadute + ' scadute' }, scadute) : aperte.length > 0 ? h('span.conta', { 'aria-label': aperte.length + ' cose da fare' }, aperte.length) : null);
+}
+
+function elencoCommesse() {
+  const r = rotta();
+  const q = minuscolo(UI.cerca.trim());
+  const tutte = (DATI.indice?.commesse || []).filter(v => corrisponde(v, q));
+  const attive = tutte.filter(v => !v.archiviata);
+  const archiviate = tutte.filter(v => v.archiviata);
+  const colonne = DATI.indice?.colonne || [];
+  const noti = new Set(colonne.map(k => k.id));
+  const gruppi = [...colonne.map(k => ({ ...k, voci: attive.filter(v => v.colonna === k.id) })),
+    { id: '', nome: 'Altre', voci: attive.filter(v => !noti.has(v.colonna)) }].filter(g => g.voci.length);
+  if (!tutte.length) return nulla(q ? 'Nessun risultato' : 'Nessuna commessa', q ? 'Prova con un altro nome.' : 'Le commesse del Mac compaiono qui.');
+  return [
+    gruppi.map(g => [
+      h('div.gruppo', h('span.pallino', { colore: g.colore }), g.nome),
+      h('div.lista', g.voci.map(v => rigaCommessa(v, r.id === v.id))),
+    ]),
+    archiviate.length > 0 && h('details.archivio', { open: q !== '' || UI.aperti.has('archiviate'), ontoggle: e => { e.currentTarget.open ? UI.aperti.add('archiviate') : UI.aperti.delete('archiviate'); } },
+      h('summary.gruppo', `Archiviate (${archiviate.length})`),
+      h('div.lista', archiviate.map(v => rigaCommessa(v, r.id === v.id)))),
+  ];
+}
+
+function testoStato() {
+  const quando = UI.controllato ? momento(UI.controllato) : '';
+  switch (UI.aggiornamento) {
+    case 'corso': return 'Aggiornamento…';
+    case 'senzaRete': return quando ? `Senza rete · ultimo controllo ${quando}` : 'Senza rete';
+    case 'attesaMac': return 'In attesa dei dati dal Mac';
+    case 'errore': return 'Aggiornamento non riuscito: ' + UI.errore;
+    default: return quando ? `Controllato ${quando}` : '';
   }
 }
-
-// ------------------------------------------------------------ avvio
-function collegaTasti() {
-  $('conferma').onclick = confermaCodice;
-  $('riprova').onclick = leggiTutto;
-  $('copia').onclick = copiaEsito;
-  $('continua').onclick = () => { $('home').hidden = true; parti(); };
-  $('pdfSi').onclick = () => segna('pdf', 'ok', 'Confermato da te.');
-  $('pdfNo').onclick = () => segna('pdf', 'errore', 'Il PDF non si è aperto bene.');
-  $('scollega').onclick = () => {
-    for (const k of ['collegamento', 'verifica', 'dati', 'esiti', 'aperture']) mem.togli(k);
-    location.reload();
-  };
+function disegnaStato() {
+  document.querySelectorAll('.stato').forEach(el => {
+    el.textContent = testoStato();
+    el.classList.toggle('errore', UI.aggiornamento === 'errore');
+  });
 }
 
-async function parti() {
-  if (!APP_KEY) { segna('accesso', 'errore', "Manca la chiave dell'app Dropbox."); return; }
-  if (!mem.leggi('collegamento')) {
-    if (!navigator.onLine) { mostraSalvati('Serve la rete per il primo accesso.'); return; }
-    await preparaAccesso();
+function paginaElenco() {
+  const lista = h('div', elencoCommesse());
+  const campo = h('input', { type: 'search', placeholder: 'Cerca commessa, cliente, impresa', value: UI.cerca, 'aria-label': 'Cerca', autocomplete: 'off', autocorrect: 'off',
+    oninput: e => { UI.cerca = e.target.value; cambia(lista, elencoCommesse()); } });
+  return h('div.pagina', h('h1', 'Commesse'), h('p.stato', testoStato()), h('label.ricerca', icona('cerca'), campo), lista);
+}
+
+function vistaScadenze() {
+  const attive = (DATI.indice?.commesse || []).filter(v => !v.archiviata);
+  let voci = attive.flatMap(v => { const s = DATI.schede.get(v.id); return s ? attivitaDi(s) : []; }).filter(x => !x.a.fatto);
+  const sicurezza = voci.filter(x => x.sicurezza).length;
+  if (UI.filtro === 'sicurezza') voci = voci.filter(x => x.sicurezza);
+  voci.sort(ordinaPerData);
+  const gruppi = [
+    ['Scadute', x => x.a.scadenza && giorniDa(x.a.scadenza) < 0],
+    ['Oggi', x => x.a.scadenza && giorniDa(x.a.scadenza) === 0],
+    ['Prossimi 7 giorni', x => x.a.scadenza && giorniDa(x.a.scadenza) > 0 && giorniDa(x.a.scadenza) <= 7],
+    ['Più avanti', x => x.a.scadenza && giorniDa(x.a.scadenza) > 7],
+    ['Senza data', x => !x.a.scadenza],
+  ];
+  const filtro = (id, nome) => h('button' + (UI.filtro === id ? '.attiva' : ''), { onclick: () => { UI.filtro = id; disegna(); } }, nome);
+  return h('div.pagina', h('h1', 'Scadenze'), h('p.stato', testoStato()),
+    h('div.filtri', filtro('tutte', 'Tutte'), filtro('sicurezza', `Sicurezza${sicurezza ? ' ' + sicurezza : ''}`)),
+    voci.length ? gruppi.map(([titolo, prova]) => {
+      const lista = voci.filter(prova);
+      return lista.length > 0 && [h('div.gruppo', `${titolo} (${lista.length})`), h('section.card', lista.map(x => rigaAttivita(x, true)))];
+    }) : nulla('Niente in sospeso', 'Nessuna scadenza aperta nelle commesse attive.'));
+}
+
+function vistaInfo() {
+  const commesse = DATI.indice?.commesse || [];
+  return h('div.pagina', h('h1', 'Informazioni'), h('p.stato', testoStato()),
+    h('section.card',
+      dato('Commesse', `${commesse.filter(v => !v.archiviata).length} attive, ${commesse.filter(v => v.archiviata).length} archiviate`),
+      DATI.indice?.aggiornato && dato('Ultima modifica dal Mac', momento(new Date(DATI.indice.aggiornato).getTime())),
+      dato('Cosa puoi vedere', 'Le schede sono in sola lettura. Gestione commessa, parcella e fatture restano solo sul Mac.'),
+      dato('Senza rete', 'Il testo delle schede resta leggibile. Foto e documenti richiedono la connessione.')),
+    h('button.tasto.pieno', { onclick: () => aggiorna({ manuale: true }) }, icona('aggiorna'), 'Aggiorna adesso'),
+    h('button.tasto.largo', { onclick: scollega }, 'Scollega Dropbox'),
+    h('footer.nota', `Versione ${VERSIONE} · © 2026 NF`));
+}
+
+async function scollega() {
+  if (!confirm('Scollegare Dropbox e togliere i dati da questo telefono?')) return;
+  for (const k of ['collegamento', 'verifica']) mem.togli(k);
+  await archivio.svuota();
+  location.hash = '';
+  location.reload();
+}
+
+function barraSezioni(r) {
+  const tasto = (percorso, nome, ic, attivo) => h('button' + (attivo ? '.attiva' : ''), { onclick: () => vai(percorso), 'aria-current': attivo ? 'page' : null }, icona(ic), nome);
+  const barra = $('schede-app');
+  barra.hidden = false;
+  cambia(barra,
+    tasto('', 'Commesse', 'commesse', r.vista === 'elenco' || r.vista === 'commessa'),
+    tasto('scadenze', 'Scadenze', 'scadenze', r.vista === 'scadenze'),
+    tasto('info', 'Informazioni', 'info', r.vista === 'info'));
+}
+
+let chiaveVista = '';
+function disegna() {
+  if (!mem.leggi('collegamento')) return;
+  const r = rotta();
+  const vista = $('vista'), lato = $('lato');
+  UI.scorrimenti.set(chiaveVista, vista.scrollTop);
+  const scorrimentoLato = lato.scrollTop;
+  barraSezioni(r);
+
+  if (!DATI.indice) {
+    cambia(vista, h('div.pagina', h('h1', 'Commesse'), h('p.stato', testoStato()),
+      nulla('Dati non ancora disponibili', UI.aggiornamento === 'senzaRete' ? 'Serve la rete per il primo aggiornamento.' : 'Apri Gestione Commesse sul Mac: la copia si prepara da sola.'),
+      h('button.tasto.pieno', { onclick: () => aggiorna({ manuale: true }) }, icona('aggiorna'), 'Riprova')));
+    cambia(lato);
     return;
   }
-  $('scollega').hidden = false;
-  const aperture = Number(mem.leggi('aperture') || 0) + 1;
-  mem.scrivi('aperture', String(aperture));
-  segna('accesso', 'ok', 'Collegamento salvato sul telefono.');
-  segna('riapertura', 'ok', 'Aperture senza nuovo accesso: ' + aperture + '.');
-  await leggiTutto();
+  if (stretto()) cambia(lato);
+  else { cambia(lato, paginaElenco()); lato.scrollTop = scorrimentoLato; }
+
+  if (r.vista === 'commessa') cambia(vista, vistaCommessa(r));
+  else if (r.vista === 'scadenze') cambia(vista, vistaScadenze());
+  else if (r.vista === 'info') cambia(vista, vistaInfo());
+  else if (stretto()) cambia(vista, paginaElenco());
+  else cambia(vista, h('div.pagina', nulla('Scegli una commessa', 'Le schede si aprono qui.')));
+
+  const chiave = location.hash;
+  const nuovaVista = chiave !== chiaveVista;
+  chiaveVista = chiave;
+  vista.scrollTop = UI.scorrimenti.get(chiave) || 0;
+  const scheda = document.querySelector('.tasti-schede .attiva');
+  if (scheda) scheda.parentElement.scrollLeft = scheda.offsetLeft - scheda.parentElement.clientWidth / 2 + scheda.offsetWidth / 2;
+  if (nuovaVista && r.voce) {
+    const v = $('voce-' + r.voce);
+    if (v) vista.scrollTop = v.getBoundingClientRect().top - vista.getBoundingClientRect().top + vista.scrollTop - (document.querySelector('.testa')?.offsetHeight || 0) - 8;
+  }
 }
 
-function avvia() {
-  try { Object.assign(stato, JSON.parse(mem.leggi('esiti') || '{}')); } catch (e) {}
-  collegaTasti();
-  disegna();
+// ------------------------------------------------------------ collegamento iniziale
+async function schermataAccesso(messaggio) {
+  $('schede-app').hidden = true;
+  cambia($('lato'));
+  const campo = h('input', { placeholder: 'Incolla qui il codice', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', 'aria-label': 'Codice di Dropbox' });
+  const nota = h('p', { role: 'alert', style: 'color:var(--red)' }, messaggio || '');
+  const tasto = h('button.tasto.pieno', { onclick: async () => {
+    const code = campo.value.trim();
+    if (!code) { nota.textContent = 'Incolla prima il codice di Dropbox.'; return; }
+    tasto.disabled = true;
+    try {
+      const j = await chiediToken({ grant_type: 'authorization_code', code, client_id: APP_KEY, code_verifier: mem.leggi('verifica') || '' });
+      if (!j.refresh_token || !mem.scrivi('collegamento', j.refresh_token)) throw new Error('Il telefono non permette di salvare il collegamento.');
+      accessoAttuale = { valore: j.access_token, fine: Date.now() + (j.expires_in - 60) * 1000 };
+      mem.togli('verifica');
+      disegna();
+      aggiorna();
+    } catch (err) {
+      nota.textContent = /invalid_grant|expired|exist/i.test(err.message) ? 'Codice non valido o scaduto: apri di nuovo Dropbox e riprova.' : senzaRete(err) ? 'Serve la rete per collegare Dropbox.' : err.message;
+      tasto.disabled = false;
+    }
+  } }, 'Conferma il codice');
+  cambia($('vista'), h('div.accesso',
+    h('h1', 'Commesse'), h('p', 'Collega la cartella dedicata di Dropbox: la webapp potrà solo leggerla.'), nota,
+    h('p', '1. Tocca il tasto, accedi a Dropbox e consenti l\'accesso.'),
+    h('a.tasto.pieno', { href: await urlAccesso(), target: '_blank', rel: 'noopener' }, 'Apri Dropbox'),
+    h('p', '2. Copia il codice che Dropbox ti mostra, torna qui e incollalo.'),
+    campo, tasto));
+}
+
+async function avvia() {
+  for (const k of ['esiti', 'dati', 'aperture']) mem.togli(k);      // resti della prova iniziale
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  const dallaHome = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-  segna('home', dallaHome ? 'ok' : 'attesa', dallaHome ? '' : 'Ora sei in Safari.');
-  if (dallaHome) parti(); else $('home').hidden = false;
+  if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+  addEventListener('hashchange', disegna);
+  matchMedia('(min-width: 820px)').addEventListener('change', disegna);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && mem.leggi('collegamento') && Date.now() - UI.controllato > ATTESA_CONTROLLO) aggiorna();
+  });
+  addEventListener('online', () => { if (mem.leggi('collegamento')) aggiorna(); });
+
+  if (!mem.leggi('collegamento')) { await schermataAccesso(); return; }
+  await caricaDalTelefono();
+  disegna();
+  aggiorna();
 }
 
 avvia();
