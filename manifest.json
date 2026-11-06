@@ -1,0 +1,14 @@
+{
+  "name": "Gestione Commesse",
+  "short_name": "Commesse",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f6",
+  "theme_color": "#eef2f6",
+  "icons": [
+    { "src": "icona-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icona-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Commesse">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef2f6">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icona-180.png">
+<title>Commesse</title>
+<style>
+:root {
+  --bg: #eef2f6; --card: #fff; --ink: #111a24; --text: #2b3540; --muted: #5d6874;
+  --line: #dde3ea; --accent: #4d6a82; --accent-soft: #e8eef4;
+  --red: #b8433a; --green: #4f8a3c; --r: 14px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  padding: calc(env(safe-area-inset-top) + 16px) calc(env(safe-area-inset-right) + 16px)
+           calc(env(safe-area-inset-bottom) + 24px) calc(env(safe-area-inset-left) + 16px);
+}
+main { max-width: 560px; margin: 0 auto; }
+h1 { font-size: 24px; line-height: 1.2; margin: 0; color: var(--ink); }
+.sotto { margin: 4px 0 16px; color: var(--muted); font-size: 15px; }
+.card { background: var(--card); border-radius: var(--r); padding: 16px; margin-bottom: 12px;
+        box-shadow: 0 1px 2px rgba(20,40,60,.06), 0 2px 10px rgba(20,40,60,.06); }
+.card h2 { font-size: 17px; margin: 0 0 8px; color: var(--ink); }
+.card p { margin: 0 0 12px; }
+.card p:last-child { margin-bottom: 0; }
+ol.passi { list-style: none; margin: 0; padding: 0; }
+ol.passi li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+ol.passi li:first-child { border-top: 0; padding-top: 0; }
+ol.passi li:last-child { padding-bottom: 0; }
+.segno { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+         background: var(--accent-soft); color: var(--muted); font-size: 14px; font-weight: 700; }
+.ok .segno { background: var(--green); color: #fff; }
+.errore .segno { background: var(--red); color: #fff; }
+.titolo { font-weight: 600; color: var(--ink); }
+.dettaglio { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.errore .dettaglio { color: var(--red); }
+button, .tasto {
+  display: block; width: 100%; min-height: 46px; padding: 12px 14px; border: 0; border-radius: 11px;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600; text-align: center;
+  text-decoration: none; margin-top: 8px; -webkit-tap-highlight-color: transparent;
+}
+button.secondo { background: var(--accent-soft); color: var(--accent); }
+.due { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+input {
+  width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px;
+  font: inherit; font-size: 16px; background: #fff; color: var(--ink);
+}
+img.foto { display: block; width: 100%; max-height: 300px; object-fit: contain; border-radius: 10px; background: var(--accent-soft); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: 13px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); }
+[hidden] { display: none !important; }
+footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prova iPhone</h1>
+  <p class="sotto">Gestione Commesse: controllo di accesso, foto, PDF e uso senza rete.</p>
+
+  <section class="card" id="home" hidden>
+    <h2>Prima aggiungi l'icona</h2>
+    <p>In Safari tocca Condividi, poi «Aggiungi alla schermata Home». Apri la prova dall'icona, non da Safari.</p>
+    <button class="secondo" id="continua">Continua comunque in Safari</button>
+  </section>
+
+  <section class="card" id="accesso" hidden>
+    <h2>Collega Dropbox</h2>
+    <p>1. Tocca il tasto, accedi a Dropbox e consenti l'accesso.</p>
+    <a class="tasto" id="apriLogin" target="_blank" rel="noopener">Apri Dropbox</a>
+    <p style="margin-top:14px">2. Copia il codice che Dropbox ti mostra, torna qui e incollalo.</p>
+    <input id="codice" placeholder="Incolla qui il codice" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Codice di Dropbox">
+    <button id="conferma">Conferma il codice</button>
+  </section>
+
+  <section class="card">
+    <h2>Controlli</h2>
+    <ol class="passi" id="passi"></ol>
+    <button class="secondo" id="riprova" hidden>Riprova</button>
+  </section>
+
+  <section class="card" id="scheda" hidden>
+    <h2 id="schedaNome"></h2>
+    <p id="schedaTesto"></p>
+    <img class="foto" id="foto" alt="Foto di prova letta da Dropbox" hidden>
+  </section>
+
+  <section class="card" id="pdf" hidden>
+    <h2>Documento PDF</h2>
+    <a class="tasto" id="apriPdf" target="_blank" rel="noopener">Apri il PDF</a>
+    <p style="margin-top:14px">Il PDF si è aperto e si legge bene?</p>
+    <div class="due">
+      <button id="pdfSi">Sì</button>
+      <button class="secondo" id="pdfNo">No</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Esito</h2>
+    <p>Quando hai finito, copia l'esito e incollalo nella chat. Non contiene password né codici.</p>
+    <button id="copia">Copia l'esito</button>
+    <pre id="esito" hidden></pre>
+    <button class="secondo" id="scollega" hidden>Scollega Dropbox</button>
+  </section>
+
+  <footer>Prova 1 · © 2026 NF</footer>
+</main>
+
+<script>
+'use strict';
+// Chiave pubblica dell'app registrata su Dropbox (non è una password).
+const APP_KEY = '6l0ko03m8r7y4me';
+const API = 'https://api.dropboxapi.com';
+const CONTENUTI = 'https://content.dropboxapi.com';
+const PERMESSI = 'files.metadata.read files.content.read';
+const FILE = { dati: '/prova.json', foto: '/prova-foto.jpg', pdf: '/prova.pdf' };
+
+const $ = id => document.getElementById(id);
+
+// Il telefono può negare la memoria: la pagina deve funzionare lo stesso.
+const mem = {
+  leggi(k) { try { return localStorage.getItem('cm_' + k); } catch (e) { return null; } },
+  scrivi(k, v) { try { localStorage.setItem('cm_' + k, v); return true; } catch (e) { return false; } },
+  togli(k) { try { localStorage.removeItem('cm_' + k); } catch (e) {} },
+};
+
+const PASSI = [
+  ['home', "Aperta dall'icona sulla Home"],
+  ['accesso', 'Collegamento a Dropbox'],
+  ['riapertura', 'Riapertura senza nuovo accesso'],
+  ['dati', 'Lettura dei dati'],
+  ['foto', 'Foto da Dropbox'],
+  ['pdf', 'Apertura del PDF'],
+  ['offline', 'Testo disponibile senza rete'],
+];
+const stato = {};
+
+function segna(id, esito, dettaglio) {
+  stato[id] = { esito, dettaglio: dettaglio || '' };
+  mem.scrivi('esiti', JSON.stringify(stato));
+  disegna();
+}
+
+function disegna() {
+  const lista = $('passi');
+  lista.textContent = '';
+  for (const [id, titolo] of PASSI) {
+    const s = stato[id] || { esito: 'attesa', dettaglio: '' };
+    const li = document.createElement('li');
+    li.className = s.esito;
+    const segno = document.createElement('span');
+    segno.className = 'segno';
+    segno.textContent = s.esito === 'ok' ? '✓' : s.esito === 'errore' ? '!' : '·';
+    const testo = document.createElement('div');
+    const t = document.createElement('div');
+    t.className = 'titolo';
+    t.textContent = titolo;
+    testo.append(t);
+    if (s.dettaglio) {
+      const d = document.createElement('div');
+      d.className = 'dettaglio';
+      d.textContent = s.dettaglio;
+      testo.append(d);
+    }
+    li.append(segno, testo);
+    lista.append(li);
+  }
+}
+
+// ------------------------------------------------------------ accesso
+const base64url = byte => btoa(String.fromCharCode(...byte))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function preparaAccesso() {
+  let verifica = mem.leggi('verifica');
+  if (!verifica) {
+    verifica = base64url(crypto.getRandomValues(new Uint8Array(48)));
+    mem.scrivi('verifica', verifica);
+  }
+  const impronta = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifica));
+  const p = new URLSearchParams({
+    client_id: APP_KEY, response_type: 'code', token_access_type: 'offline',
+    code_challenge: base64url(new Uint8Array(impronta)), code_challenge_method: 'S256', scope: PERMESSI,
+  });
+  $('apriLogin').href = 'https://www.dropbox.com/oauth2/authorize?' + p;
+  $('accesso').hidden = false;
+}
+
+async function chiediToken(campi) {
+  const r = await fetch(API + '/oauth2/token', { method: 'POST', body: new URLSearchParams(campi) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error(j.error_description || j.error || 'Risposta ' + r.status);
+    e.rifiutato = true;
+    throw e;
+  }
+  return j;
+}
+
+async function confermaCodice() {
+  const code = $('codice').value.trim();
+  if (!code) { segna('accesso', 'errore', 'Incolla prima il codice di Dropbox.'); return; }
+  $('conferma').disabled = true;
+  try {
+    const j = await chiediToken({
+      grant_type: 'authorization_code', code, client_id: APP_KEY, code_verifier: mem.leggi('verifica') || '',
+    });
+    if (!j.refresh_token) throw new Error('Dropbox non ha dato il permesso permanente.');
+    if (!mem.scrivi('collegamento', j.refresh_token)) throw new Error('Il telefono non permette di salvare il collegamento.');
+    accessoAttuale = { valore: j.access_token, fine: Date.now() + (j.expires_in - 60) * 1000 };
+    mem.togli('verifica');
+    mem.scrivi('aperture', '0');
+    $('accesso').hidden = true;
+    $('scollega').hidden = false;
+    segna('accesso', 'ok', 'Collegata alla cartella dedicata.');
+    segna('riapertura', 'attesa', "Chiudi del tutto la webapp e riaprila dall'icona.");
+    await leggiTutto();
+  } catch (e) {
+    segna('accesso', 'errore', testoErrore(e));
+  } finally {
+    $('conferma').disabled = false;
+  }
+}
+
+let accessoAttuale = null;
+async function token() {
+  if (accessoAttuale && Date.now() < accessoAttuale.fine) return accessoAttuale.valore;
+  const j = await chiediToken({
+    grant_type: 'refresh_token', refresh_token: mem.leggi('collegamento') || '', client_id: APP_KEY,
+  });
+  accessoAttuale = { valore: j.access_token, fine: Date.now() + (j.expires_in - 60) * 1000 };
+  return accessoAttuale.valore;
+}
+
+// ------------------------------------------------------------ Dropbox
+async function erroreDropbox(r) {
+  const t = await r.text().catch(() => '');
+  let motivo = t.slice(0, 200);
+  try { motivo = JSON.parse(t).error_summary || motivo; } catch (e) {}
+  const err = new Error(motivo || 'Risposta ' + r.status);
+  err.stato = r.status;
+  return err;
+}
+
+async function chiama(percorso, corpo) {
+  const r = await fetch(API + percorso, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + await token(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+  });
+  if (!r.ok) throw await erroreDropbox(r);
+  return r.json();
+}
+
+// Nell'intestazione le lettere accentate vanno scritte in forma \uXXXX.
+const intestazione = o => JSON.stringify(o)
+  .replace(/[\u007f-￿]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+
+async function scarica(path) {
+  const r = await fetch(CONTENUTI + '/2/files/download', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + await token(), 'Dropbox-API-Arg': intestazione({ path }) },
+  });
+  if (!r.ok) throw await erroreDropbox(r);
+  return r.blob();
+}
+
+function testoErrore(e) {
+  const m = String(e && e.message || e);
+  if (/missing_scope/.test(m)) return 'Manca un permesso nelle impostazioni dell\'app su Dropbox. (' + m + ')';
+  if (/not_found/.test(m)) return 'File non ancora presente nella cartella dedicata.';
+  if (/invalid_grant|code doesn't exist|expired/i.test(m)) return 'Codice non valido o scaduto: apri di nuovo Dropbox e riprova. (' + m + ')';
+  if (e instanceof TypeError) return 'Connessione non riuscita. (' + m + ')';
+  return m;
+}
+
+const senzaRete = e => !navigator.onLine || e instanceof TypeError;
+
+// ------------------------------------------------------------ lettura
+function mostraScheda(d, salvato) {
+  $('schedaNome').textContent = d.nome || 'Scheda senza nome';
+  $('schedaTesto').textContent = [d.cliente, d.cantiere, d.nota].filter(Boolean).join(' · ')
+    + (salvato ? ' (copia salvata sul telefono)' : '');
+  $('scheda').hidden = false;
+}
+
+function mostraSalvati(motivo) {
+  const salvato = mem.leggi('dati');
+  if (!salvato) { segna('offline', 'errore', 'Nessun dato salvato sul telefono. ' + motivo); return false; }
+  mostraScheda(JSON.parse(salvato), true);
+  segna('offline', 'ok', 'Scheda letta dal telefono, senza Dropbox.');
+  return true;
+}
+
+async function leggiTutto() {
+  $('riprova').hidden = true;
+  let elenco;
+  try {
+    elenco = await chiama('/2/files/list_folder', { path: '' });
+  } catch (e) {
+    $('riprova').hidden = false;
+    if (senzaRete(e)) { mostraSalvati(testoErrore(e)); return; }
+    if (e.rifiutato) {
+      mem.togli('collegamento');
+      segna('accesso', 'errore', 'Il collegamento non è più valido: accedi di nuovo. (' + e.message + ')');
+      await preparaAccesso();
+      return;
+    }
+    segna('dati', 'errore', testoErrore(e));
+    return;
+  }
+  const presenti = elenco.entries.length;
+  if (!presenti) {
+    segna('dati', 'errore', 'La cartella dedicata è ancora vuota: avvisa Claude, poi tocca Riprova.');
+    $('riprova').hidden = false;
+    return;
+  }
+  try {
+    const d = JSON.parse(await (await scarica(FILE.dati)).text());
+    mem.scrivi('dati', JSON.stringify(d));
+    mostraScheda(d, false);
+    segna('dati', 'ok', presenti + ' file nella cartella dedicata. Scheda letta da Dropbox.');
+    if (!(stato.offline && stato.offline.esito === 'ok')) {
+      segna('offline', 'attesa', "Metti l'iPhone in modalità aereo, chiudi e riapri dall'icona.");
+    }
+  } catch (e) {
+    segna('dati', 'errore', testoErrore(e));
+    $('riprova').hidden = false;
+  }
+  try {
+    const blob = await scarica(FILE.foto);
+    const img = $('foto');
+    await new Promise((fatto, errore) => {
+      img.onload = fatto;
+      img.onerror = () => errore(new Error('Il telefono non riesce a mostrare la foto.'));
+      img.src = URL.createObjectURL(blob);
+    });
+    img.hidden = false;
+    segna('foto', 'ok', Math.round(blob.size / 1024) + ' KB scaricati.');
+  } catch (e) {
+    segna('foto', 'errore', testoErrore(e));
+    $('riprova').hidden = false;
+  }
+  try {
+    const j = await chiama('/2/files/get_temporary_link', { path: FILE.pdf });
+    $('apriPdf').href = j.link;
+    $('pdf').hidden = false;
+  } catch (e) {
+    segna('pdf', 'errore', testoErrore(e));
+    $('riprova').hidden = false;
+  }
+}
+
+// ------------------------------------------------------------ esito
+function testoEsito() {
+  const righe = PASSI.map(([id, titolo]) => {
+    const s = stato[id] || { esito: 'attesa', dettaglio: '' };
+    return `${s.esito.toUpperCase()} - ${titolo}${s.dettaglio ? ': ' + s.dettaglio : ''}`;
+  });
+  righe.push('Telefono: ' + navigator.userAgent);
+  return 'Prova 1\n' + righe.join('\n');
+}
+
+async function copiaEsito() {
+  const testo = testoEsito();
+  const box = $('esito');
+  box.textContent = testo;
+  box.hidden = false;
+  try {
+    await navigator.clipboard.writeText(testo);
+    $('copia').textContent = 'Esito copiato';
+  } catch (e) {
+    $('copia').textContent = 'Seleziona il testo qui sotto e copialo';
+  }
+}
+
+// ------------------------------------------------------------ avvio
+function collegaTasti() {
+  $('conferma').onclick = confermaCodice;
+  $('riprova').onclick = leggiTutto;
+  $('copia').onclick = copiaEsito;
+  $('continua').onclick = () => { $('home').hidden = true; parti(); };
+  $('pdfSi').onclick = () => segna('pdf', 'ok', 'Confermato da te.');
+  $('pdfNo').onclick = () => segna('pdf', 'errore', 'Il PDF non si è aperto bene.');
+  $('scollega').onclick = () => {
+    for (const k of ['collegamento', 'verifica', 'dati', 'esiti', 'aperture']) mem.togli(k);
+    location.reload();
+  };
+}
+
+async function parti() {
+  if (!APP_KEY) { segna('accesso', 'errore', "Manca la chiave dell'app Dropbox."); return; }
+  if (!mem.leggi('collegamento')) {
+    if (!navigator.onLine) { mostraSalvati('Serve la rete per il primo accesso.'); return; }
+    await preparaAccesso();
+    return;
+  }
+  $('scollega').hidden = false;
+  const aperture = Number(mem.leggi('aperture') || 0) + 1;
+  mem.scrivi('aperture', String(aperture));
+  segna('accesso', 'ok', 'Collegamento salvato sul telefono.');
+  segna('riapertura', 'ok', 'Aperture senza nuovo accesso: ' + aperture + '.');
+  await leggiTutto();
+}
+
+function avvia() {
+  try { Object.assign(stato, JSON.parse(mem.leggi('esiti') || '{}')); } catch (e) {}
+  collegaTasti();
+  disegna();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  const dallaHome = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  segna('home', dallaHome ? 'ok' : 'attesa', dallaHome ? '' : 'Ora sei in Safari.');
+  if (dallaHome) parti(); else $('home').hidden = false;
+}
+
+avvia();
+</script>
+</body>
+</html>
