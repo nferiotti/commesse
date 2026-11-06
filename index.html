@@ -124,6 +124,8 @@ details.voce[open] > summary .freccia { transform: rotate(90deg); }
 .attivita .quando { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .attivita .quando.scaduta { color: var(--red); }
 .attivita.fatta b { color: var(--muted); text-decoration: line-through; }
+.corpo details.voce { box-shadow: none; border: 1px solid var(--line); margin-bottom: 8px; }
+.corpo details.voce:last-child { margin-bottom: 0; }
 .prodotto { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
 .miniatura { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--accent-soft); display: grid; place-items: center; color: var(--muted); }
 .miniatura img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -181,7 +183,7 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.0';
+const VERSIONE = '1.1';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -726,7 +728,7 @@ function schedaSoggetti(c, tipo) {
       sezione('Da fare in cantiere', etichette(x.dafare)),
       sezione('Annotazioni', elencoAttivita(x.note)),
       sezione('Note', (x.appunti || []).filter(n => testoPiano(n.testo)).map(n => dato(dataIT(n.data) || 'Nota', n.testo))),
-      prodotti.length > 0 && sezione('Prodotti', h('div.etichette', prodotti.map(p => h('span.etichetta', p.nome || 'Senza nome')))));
+      prodotti.length > 0 && sezione('Prodotti', prodotti.map(p => voceProdotto(c, p, true))));
   });
 }
 
@@ -735,26 +737,26 @@ function misure(p) {
   return m.length ? m.join(' × ') + ' cm' : '';
 }
 
+// Dentro un fornitore il prodotto si apre sul posto: ha un suo id, così aprirlo lì non lo apre anche nella scheda Prodotti.
+function voceProdotto(c, p, nelFornitore = false) {
+  const [stato, colore] = STATI_PRODOTTO[p.stato] || STATI_PRODOTTO.valutare;
+  const foto = (p.file || []).find(f => f.tipo === 'foto' && f.copia);
+  const fornitore = c.fornitori.find(f => f.id === p.fornitoreId);
+  const link = p.link && (/^https?:/.test(p.link) ? p.link : 'https://' + p.link);
+  const titolo = h('div.prodotto', foto ? immagine(foto, 'div.miniatura') : h('div.miniatura', icona('immagine')),
+    h('div', h('span.voce-titolo', p.nome || 'Senza nome'), h('span.voce-sotto', [p.marca, p.codice].filter(Boolean).join(' · ')), h('div.pillole', pillola(stato, colore))));
+  return voce((nelFornitore ? 'fornitore-' : '') + p.id, titolo, '', null,
+    dato('Ambiente', p.ambiente), !nelFornitore && dato('Fornitore', fornitore && nomeSoggetto(fornitore)), dato('Misure', misure(p)),
+    p.prezzo !== '' && p.prezzo != null && dato('Prezzo', `${p.quantita || 1} × ${euro(p.prezzo)}`), dato('Note', p.note),
+    link && dato('Sito', h('a', { href: link, target: '_blank', rel: 'noopener' }, p.link)),
+    sezione('Foto e schede tecniche', file(p.file)));
+}
+
 function schedaProdotti(c) {
   if (!c.prodotti.length) return nulla('Nessun prodotto', 'I prodotti inseriti sul Mac compaiono qui.');
   const gruppi = {};
   c.prodotti.forEach(p => (gruppi[p.categoria || 'Altro'] ||= []).push(p));
-  return Object.entries(gruppi).map(([categoria, lista]) => [
-    h('div.gruppo', categoria),
-    lista.map(p => {
-      const [stato, colore] = STATI_PRODOTTO[p.stato] || STATI_PRODOTTO.valutare;
-      const foto = (p.file || []).find(f => f.tipo === 'foto' && f.copia);
-      const fornitore = c.fornitori.find(f => f.id === p.fornitoreId);
-      const link = p.link && (/^https?:/.test(p.link) ? p.link : 'https://' + p.link);
-      const titolo = h('div.prodotto', foto ? immagine(foto, 'div.miniatura') : h('div.miniatura', icona('immagine')),
-        h('div', h('span.voce-titolo', p.nome || 'Senza nome'), h('span.voce-sotto', [p.marca, p.codice].filter(Boolean).join(' · ')), h('div.pillole', pillola(stato, colore))));
-      return voce(p.id, titolo, '', null,
-        dato('Ambiente', p.ambiente), dato('Fornitore', fornitore && nomeSoggetto(fornitore)), dato('Misure', misure(p)),
-        p.prezzo !== '' && p.prezzo != null && dato('Prezzo', `${p.quantita || 1} × ${euro(p.prezzo)}`), dato('Note', p.note),
-        link && dato('Sito', h('a', { href: link, target: '_blank', rel: 'noopener' }, p.link)),
-        sezione('Foto e schede tecniche', file(p.file)));
-    }),
-  ]);
+  return Object.entries(gruppi).map(([categoria, lista]) => [h('div.gruppo', categoria), lista.map(p => voceProdotto(c, p))]);
 }
 
 const perData = lista => [...lista].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
