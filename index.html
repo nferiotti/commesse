@@ -183,7 +183,7 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.1';
+const VERSIONE = '1.2';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -214,6 +214,7 @@ const SCHEDE = [
   { id: 'pratiche', nome: 'Pratiche', conta: c => c.pratiche.length },
   { id: 'imprese', nome: 'Imprese', conta: c => c.imprese.length },
   { id: 'fornitori', nome: 'Fornitori', conta: c => c.fornitori.length },
+  { id: 'collaboratori', nome: 'Collaboratori', conta: c => c.collaboratori.length },
   { id: 'prodotti', nome: 'Prodotti', conta: c => c.prodotti.length },
   { id: 'sopralluoghi', nome: 'Sopralluoghi', conta: c => c.sopralluoghi.length },
   { id: 'riunioni', nome: 'Report', conta: c => c.riunioni.length },
@@ -431,7 +432,7 @@ async function caricaDalTelefono() {
 }
 
 function completa(c) {
-  for (const k of ['catasto', 'attivita', 'pratiche', 'imprese', 'fornitori', 'prodotti', 'sopralluoghi', 'riunioni', 'verbali']) c[k] ||= [];
+  for (const k of ['catasto', 'attivita', 'pratiche', 'imprese', 'fornitori', 'prodotti', 'sopralluoghi', 'riunioni', 'verbali', 'collaboratori']) c[k] ||= [];
   c.cliente ||= {}; c.cantiere ||= {};
   return c;
 }
@@ -489,6 +490,7 @@ async function aggiorna({ manuale = false } = {}) {
 }
 
 // ------------------------------------------------------------ dati derivati
+const tipoReport = r => r.tipo === 'Altro' ? ((r.tipoAltro || '').trim() || 'Altro') : (r.tipo || 'Riunione');
 const nomeSoggetto = x => x.contatto?.nome || x.nome || 'Senza nome';
 
 function attivitaDi(c) {
@@ -732,6 +734,27 @@ function schedaSoggetti(c, tipo) {
   });
 }
 
+// collaboratori esterni: contatto dalla rubrica, ruolo, prestazione, importo e a che punto siamo
+function schedaCollaboratori(c) {
+  if (!c.collaboratori.length) return nulla('Nessun collaboratore', 'I collaboratori inseriti sul Mac in «Gestione commessa» compaiono qui.');
+  return c.collaboratori.map(x => {
+    const k = x.contatto || {};
+    const numeri = [[k.cellulare, 'Cellulare'], [k.telefono, 'Telefono']].filter(n => n[0]);
+    const stato = x.pagato ? pillola('Pagato', '#4f8a3c') : !x.espletata ? pillola('Da espletare', '#c98a1b') : pillola('Da pagare', '#b8433a');
+    return voce(x.id, nomeSoggetto(x), [x.ruolo || k.categoria, x.prestazione].filter(Boolean).join(' · '),
+      stato,
+      numeri.length + (k.email ? 1 : 0) > 0 && h('div.azioni',
+        numeri.map(([n, t]) => h('a.tasto', { href: 'tel:' + n.replace(/\s/g, '') }, icona('telefono'), t)),
+        k.email && h('a.tasto', { href: 'mailto:' + k.email }, icona('mail'), 'Email')),
+      dato('Ruolo', x.ruolo), dato('Prestazione richiesta', x.prestazione),
+      Number(x.importo) > 0 && dato('Importo pattuito', euro(x.importo)),
+      dato('A carico', x.carico === 'cliente' ? 'del cliente' : x.carico === 'mio' ? 'mio' : ''),
+      dato('Prestazione espletata', x.espletata ? 'Sì' : 'No'), dato('Pagato', x.pagato ? 'Sì' : 'No'),
+      dato('Professione', k.categoria), dato('Cellulare', k.cellulare), dato('Telefono', k.telefono), dato('Email', k.email), dato('PEC', k.pec),
+      dato('Partita IVA', k.piva), dato('Indirizzo', k.indirizzo), dato('Sito', k.sito), dato('Note in rubrica', k.note));
+  });
+}
+
 function misure(p) {
   const m = [['L', p.misuraL], ['H', p.misuraH], ['P', p.misuraP]].filter(x => String(x[1] ?? '').trim()).map(x => `${x[0]} ${x[1]}`);
   return m.length ? m.join(' × ') + ' cm' : '';
@@ -779,7 +802,7 @@ function schedaSopralluoghi(c) {
 
 function schedaRiunioni(c) {
   if (!c.riunioni.length) return nulla('Nessun report', 'I report inseriti sul Mac compaiono qui.');
-  return perData(c.riunioni).map(r => voce(r.id, r.titolo || r.tipo || 'Report', [dataIT(r.data), r.ora, r.titolo && r.tipo].filter(Boolean).join(' · '), null,
+  return perData(c.riunioni).map(r => voce(r.id, r.titolo || tipoReport(r), [dataIT(r.data), r.ora, r.titolo && tipoReport(r)].filter(Boolean).join(' · '), null,
     dato('Partecipanti', r.partecipanti), dato('Sintesi', r.sintesi), dato('Decisioni prese', r.decisioni),
     sezione('Da fare e scadenze', elencoAttivita(r.dafare)),
     sezione('Allegati', file(r.allegati, r.pdf))));
@@ -812,7 +835,7 @@ function schedaVerbali(c) {
 }
 
 const CORPI = {
-  generale: schedaGenerale, scadenze: schedaScadenzeCommessa, pratiche: schedaPratiche, imprese: c => schedaSoggetti(c, 'imprese'), fornitori: c => schedaSoggetti(c, 'fornitori'),
+  generale: schedaGenerale, scadenze: schedaScadenzeCommessa, pratiche: schedaPratiche, imprese: c => schedaSoggetti(c, 'imprese'), fornitori: c => schedaSoggetti(c, 'fornitori'), collaboratori: schedaCollaboratori,
   prodotti: schedaProdotti, sopralluoghi: schedaSopralluoghi, riunioni: schedaRiunioni, verbali: schedaVerbali,
 };
 
