@@ -183,7 +183,7 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.2';
+const VERSIONE = '1.5';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -218,7 +218,7 @@ const SCHEDE = [
   { id: 'prodotti', nome: 'Prodotti', conta: c => c.prodotti.length },
   { id: 'sopralluoghi', nome: 'Sopralluoghi', conta: c => c.sopralluoghi.length },
   { id: 'riunioni', nome: 'Report', conta: c => c.riunioni.length },
-  { id: 'verbali', nome: 'Verbali CSE', conta: c => c.verbali.length },
+  { id: 'verbali', nome: 'Verbali CSE', conta: c => c.verbali.length + c.coordinamenti.length },
 ];
 const STATI_PRATICA = { preparazione: ['In preparazione', '#7b8794'], presentata: ['Presentata', '#3d6fb6'], integrazioni: ['Integrazioni', '#c98a1b'], autorizzata: ['Autorizzata', '#4f8a3c'], respinta: ['Respinta', '#b8433a'], chiusa: ['Chiusa', '#4d6a82'] };
 const STATI_PRODOTTO = { valutare: ['Da valutare', '#c98a1b'], confermato: ['Confermato', '#4f8a3c'], scartato: ['Scartato', '#7b8794'] };
@@ -432,8 +432,8 @@ async function caricaDalTelefono() {
 }
 
 function completa(c) {
-  for (const k of ['catasto', 'attivita', 'pratiche', 'imprese', 'fornitori', 'prodotti', 'sopralluoghi', 'riunioni', 'verbali', 'collaboratori']) c[k] ||= [];
-  c.cliente ||= {}; c.cantiere ||= {};
+  for (const k of ['catasto', 'attivita', 'pratiche', 'imprese', 'fornitori', 'prodotti', 'sopralluoghi', 'riunioni', 'verbali', 'coordinamenti', 'collaboratori', 'referenti']) c[k] ||= [];
+  c.cliente ||= {}; c.cantiere ||= {}; c.contratto ||= {};
   return c;
 }
 
@@ -662,17 +662,22 @@ function schedaGenerale(c) {
   const indirizzo = [ca.indirizzo, ca.comune].filter(Boolean).join(', ');
   const prossime = attivitaDi(c).filter(x => !x.a.fatto).sort(ordinaPerData).slice(0, 5);
   const link = (href, testo) => h('a', { href }, testo);
+  const pubblica = c.tipo === 'pubblico', ct = c.contratto;
   return [
-    h('section.card', h('h3', 'Cliente'),
-      dato('Nome', cl.nome), dato('Codice fiscale', cl.cf), dato('Partita IVA', cl.piva), dato('Indirizzo', cl.indirizzo),
+    h('section.card', h('h3', pubblica ? 'Comune / ente' : 'Cliente'),
+      dato('Nome', cl.nome), dato('Codice fiscale', cl.cf), dato('Partita IVA', cl.piva), pubblica && dato('Codice univoco', cl.codiceUnivoco), dato('Indirizzo', cl.indirizzo),
       cl.email && dato('Email', link('mailto:' + cl.email, cl.email)), cl.pec && dato('PEC', link('mailto:' + cl.pec, cl.pec)),
       cl.telefono && dato('Telefono', link('tel:' + cl.telefono.replace(/\s/g, ''), cl.telefono)), dato('Note', cl.note),
       cl.respLavori && dato('Ruolo', 'È anche Responsabile dei lavori')),
+    pubblica && h('section.card', h('h3', 'Contratto'),
+      dato('Codice commessa', ct.codice), dato('Numero contratto', ct.numero), dato('Data contratto', dataIT(ct.data)), dato('CIG', ct.cig), dato('CUP', ct.cup)),
+    pubblica && c.referenti.length > 0 && h('section.card', h('h3', 'Referenti della commessa'), c.referenti.map(r => dato(r.ruolo || 'Referente', h('div', r.nome,
+      r.email && h('div', link('mailto:' + r.email, r.email)), r.telefono && h('div', link('tel:' + r.telefono.replace(/\s/g, ''), r.telefono)))))),
     h('section.card', h('h3', 'Cantiere'),
       dato('Indirizzo', ca.indirizzo), dato('Comune', ca.comune), dato('Piano / interno', ca.piano),
       dato('Inizio lavori', dataIT(ca.inizioLavori)), dato('Accesso e chiavi', ca.note),
       indirizzo && h('div.azioni', h('a.tasto', { href: 'https://maps.apple.com/?q=' + encodeURIComponent(indirizzo), target: '_blank', rel: 'noopener' }, icona('luogo'), 'Apri in Mappe'))),
-    c.catasto.length > 0 && h('section.card', h('h3', 'Dati catastali'), c.catasto.map(r => dato(`${r.tipo || 'Immobile'}${r.comune ? ' · ' + r.comune : ''}`,
+    !pubblica && c.catasto.length > 0 && h('section.card', h('h3', 'Dati catastali'), c.catasto.map(r => dato(`${r.tipo || 'Immobile'}${r.comune ? ' · ' + r.comune : ''}`,
       [r.sezione && 'Sez. ' + r.sezione, r.foglio && 'Fg. ' + r.foglio, r.mappale && 'Mapp. ' + r.mappale, r.sub && 'Sub ' + r.sub, r.categoria, r.classe && 'Cl. ' + r.classe, r.consistenza, r.rendita && 'Rendita ' + r.rendita + ' €'].filter(Boolean).join(' · ')))),
     testoPiano(c.note) && h('section.card', h('h3', 'Note della commessa'), h('div.dato', h('div', testoPiano(c.note)))),
     prossime.length > 0 && h('section.card', h('h3', 'Prossime cose da fare'), prossime.map(x => rigaAttivita(x))),
@@ -726,12 +731,24 @@ function schedaSoggetti(c, tipo) {
       dato('Partita IVA', k.piva), dato('Indirizzo', k.indirizzo), dato('Sito', k.sito), dato('Note in rubrica', k.note),
       Number(x.importo) > 0 && dato('Importo', [euro(x.importo), Number(x.perc) > 0 && `${x.perc}%`].filter(Boolean).join(' · ')),
       Number(x.avanzamento) > 0 && dato('Avanzamento', `${x.avanzamento}%`),
+      sezione('Fatture emesse', fattureDitta(x.fatture)),
       sezione('Fase lavorativa', etichette(fasi)),
       sezione('Da fare in cantiere', etichette(x.dafare)),
       sezione('Annotazioni', elencoAttivita(x.note)),
       sezione('Note', (x.appunti || []).filter(n => testoPiano(n.testo)).map(n => dato(dataIT(n.data) || 'Nota', n.testo))),
       prodotti.length > 0 && sezione('Prodotti', prodotti.map(p => voceProdotto(c, p, true))));
   });
+}
+
+// fatture emesse da imprese e fornitori: il totale si calcola da imponibile e IVA, come sul Mac
+function fattureDitta(fatture) {
+  if (!fatture || !fatture.length) return null;
+  const conti = f => { const i = Number(f.imponibile) || 0, v = Math.round(i * (Number(f.iva) || 0)) / 100; return { i, v, t: i + v }; };
+  const tot = fatture.map(conti).reduce((s, k) => ({ i: s.i + k.i, v: s.v + k.v, t: s.t + k.t }), { i: 0, v: 0, t: 0 });
+  return [fatture.map(f => { const k = conti(f); return dato(
+    [f.descrizione || 'Fattura', f.numero && 'n. ' + f.numero, f.data && dataIT(f.data)].filter(Boolean).join(' · '),
+    `Imponibile ${euro(k.i)}\nIVA ${Number(f.iva) || 0}% ${euro(k.v)}\nTotale ${euro(k.t)}`); }),
+    fatture.length > 1 && dato('Totale fatture', `Imponibile ${euro(tot.i)}\nIVA ${euro(tot.v)}\nTotale ${euro(tot.t)}`)];
 }
 
 // collaboratori esterni: contatto dalla rubrica, ruolo, prestazione, importo e a che punto siamo
@@ -808,9 +825,27 @@ function schedaRiunioni(c) {
     sezione('Allegati', file(r.allegati, r.pdf))));
 }
 
+function voceCoordinamento(v) {
+  const ruolo = s => s.ruolo === 'Altro' ? (s.ruoloAltro || 'Altro') : s.ruolo;
+  const soggetti = (v.soggetti || []).filter(s => s.nome);
+  const elenco = lista => lista.map(s => `${s.nome} · ${ruolo(s)}`).join('\n');
+  const r = v.redazione || {};
+  return voce(v.id, `Verbale di coordinamento n. ${v.numero || ''}`, dataIT(v.data), [],
+    dato('Luogo della riunione', v.luogo),
+    dato('Presenti', elenco(soggetti.filter(s => s.presente))), dato('Assenti', elenco(soggetti.filter(s => !s.presente))),
+    (v.argomenti || []).filter(a => a.testo).map((a, i) => dato(`Argomento ${i + 1}`, a.testo)),
+    dato('Disposizioni', v.disposizioni),
+    dato('Soggetti tenuti all\'attuazione', elenco(soggetti.filter(s => s.attua))),
+    dato('Misure di coordinamento per l\'uso comune', v.misure), dato('Varie ed eventuali', v.varie),
+    dato('Redazione', [dataIT(r.data), r.ora && `ore ${r.ora}`, r.nome, r.nome && ruolo(r)].filter(Boolean).join(' · ')),
+    dato('Trasmissione', elenco(soggetti.filter(s => s.trasmetti))),
+    sezione('Documento', file([], v.pdf)));
+}
+
 function schedaVerbali(c) {
-  if (!c.verbali.length) return nulla('Nessun verbale', 'I verbali CSE inseriti sul Mac compaiono qui.');
-  return perData(c.verbali).map(v => {
+  if (!c.verbali.length && !c.coordinamenti.length) return nulla('Nessun verbale', 'I verbali CSE inseriti sul Mac compaiono qui.');
+  return perData([...c.verbali, ...c.coordinamenti]).map(v => {
+    if (c.coordinamenti.includes(v)) return voceCoordinamento(v);
     const nc = v.nc || [];
     const aperte = nc.filter(n => !n.fatto).length;
     const presenti = (v.presenti || []).filter(p => p.presente).map(p => {
@@ -818,7 +853,7 @@ function schedaVerbali(c) {
       return i ? `${nomeSoggetto(i)} · ${p.ruolo}${p.operai ? ` · ${p.operai} operai` : ''}${p.referente ? ` · ${p.referente}` : ''}` : null;
     }).filter(Boolean).join('\n');
     const controlli = (v.checklist || []).filter(r => r.esito);
-    return voce(v.id, `Verbale CSE n. ${v.numero || ''}`, dataIT(v.data),
+    return voce(v.id, `Verbale di sopralluogo n. ${v.numero || ''}`, dataIT(v.data),
       [v.sospensione?.attiva && pillola('Sospensione', '#b8433a'), aperte > 0 && pillola(aperte === 1 ? '1 non conformità aperta' : `${aperte} non conformità aperte`, '#b8433a')].filter(Boolean),
       dato('Orario', [v.oraInizio, v.oraFine].filter(Boolean).join(' – ')), dato('Meteo', v.meteo), dato('Imprese presenti', presenti),
       dato('Stato del cantiere', v.statoCantiere), dato('Lavorazioni future', v.lavorazioniFuture), dato('Note del CSE', v.noteCSE), dato('Disposizioni', v.disposizioni),
@@ -949,7 +984,7 @@ function vistaInfo() {
     h('section.card',
       dato('Commesse', `${commesse.filter(v => !v.archiviata).length} attive, ${commesse.filter(v => v.archiviata).length} archiviate`),
       DATI.indice?.aggiornato && dato('Ultima modifica dal Mac', momento(new Date(DATI.indice.aggiornato).getTime())),
-      dato('Cosa puoi vedere', 'Le schede sono in sola lettura. Gestione commessa, parcella e fatture restano solo sul Mac.'),
+      dato('Cosa puoi vedere', 'Le schede sono in sola lettura. Gestione commessa, parcella e fatture dello studio restano solo sul Mac.'),
       dato('Senza rete', 'Il testo delle schede resta leggibile. Foto e documenti richiedono la connessione.')),
     h('button.tasto.pieno', { onclick: () => aggiorna({ manuale: true }) }, icona('aggiorna'), 'Aggiorna adesso'),
     h('button.tasto.largo', { onclick: scollega }, 'Scollega Dropbox'),
