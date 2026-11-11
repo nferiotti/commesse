@@ -169,6 +169,26 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
   .indietro { display: none; }
   .testa { padding-top: calc(env(safe-area-inset-top) + 14px); }
 }
+/* cronoprogramma: il diagramma resta chiaro anche con l'aspetto scuro, come sulla carta */
+.gt-sintesi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.gt-sintesi div { background: var(--card); border-radius: 12px; padding: 9px 12px; box-shadow: var(--shadow); border-left: 4px solid var(--c, var(--accent)); }
+.gt-sintesi span { display: block; color: var(--muted); font-size: 12.5px; }
+.gt-sintesi b { color: var(--ink); font-size: 17px; }
+.gt-avviso { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--ink); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; font-size: 14px; }
+.gantt { display: grid; grid-template-columns: 128px minmax(0, 1fr); background: #fff; color: #111a24; border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+.gt-elenco { border-right: 1px solid #b9c5d1; }
+.gt-testa { height: 46px; display: flex; align-items: flex-end; padding: 0 8px 8px; background: #e8eef4; border-bottom: 1px solid #b9c5d1; font-size: 11.5px; font-weight: 700; color: #2f3e4c; }
+.gt-riga { height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12.5px; }
+.gt-riga:nth-child(odd) { background: #f6f8fa; }
+.gt-riga span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gt-riga i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.gt-riga.rosso span { color: #b8433a; font-weight: 700; }
+.gt-tempo { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gt-tempo svg { display: block; }
+.gt-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 10px 2px 4px; font-size: 13.5px; color: var(--ink); }
+.gt-legenda b { font-size: 11.5px; letter-spacing: .08em; color: var(--muted); }
+.gt-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.gt-legenda i { width: 20px; height: 10px; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -179,11 +199,12 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 </div>
 <div id="avviso" role="status" hidden></div>
 
+<script src="gantt.js"></script>
 <script>
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.5';
+const VERSIONE = '1.7';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -219,6 +240,7 @@ const SCHEDE = [
   { id: 'sopralluoghi', nome: 'Sopralluoghi', conta: c => c.sopralluoghi.length },
   { id: 'riunioni', nome: 'Report', conta: c => c.riunioni.length },
   { id: 'verbali', nome: 'Verbali CSE', conta: c => c.verbali.length + c.coordinamenti.length },
+  { id: 'cronoprogramma', nome: 'Cronoprogramma', conta: c => ((c.cronoprogramma || {}).attivita || []).length },
 ];
 const STATI_PRATICA = { preparazione: ['In preparazione', '#7b8794'], presentata: ['Presentata', '#3d6fb6'], integrazioni: ['Integrazioni', '#c98a1b'], autorizzata: ['Autorizzata', '#4f8a3c'], respinta: ['Respinta', '#b8433a'], chiusa: ['Chiusa', '#4d6a82'] };
 const STATI_PRODOTTO = { valutare: ['Da valutare', '#c98a1b'], confermato: ['Confermato', '#4f8a3c'], scartato: ['Scartato', '#7b8794'] };
@@ -839,6 +861,7 @@ function voceCoordinamento(v) {
     dato('Misure di coordinamento per l\'uso comune', v.misure), dato('Varie ed eventuali', v.varie),
     dato('Redazione', [dataIT(r.data), r.ora && `ore ${r.ora}`, r.nome, r.nome && ruolo(r)].filter(Boolean).join(' · ')),
     dato('Trasmissione', elenco(soggetti.filter(s => s.trasmetti))),
+    sezione('Allegati', file(v.allegati), (v.allegati || []).some(f => f.didascalia) && h('div', (v.allegati || []).map((f, i) => dato(`Allegato ${i + 1}`, [f.didascalia, f.nome].filter(Boolean).join(' · '))))),
     sezione('Documento', file([], v.pdf)));
 }
 
@@ -871,8 +894,45 @@ function schedaVerbali(c) {
 
 const CORPI = {
   generale: schedaGenerale, scadenze: schedaScadenzeCommessa, pratiche: schedaPratiche, imprese: c => schedaSoggetti(c, 'imprese'), fornitori: c => schedaSoggetti(c, 'fornitori'), collaboratori: schedaCollaboratori,
-  prodotti: schedaProdotti, sopralluoghi: schedaSopralluoghi, riunioni: schedaRiunioni, verbali: schedaVerbali,
+  prodotti: schedaProdotti, sopralluoghi: schedaSopralluoghi, riunioni: schedaRiunioni, verbali: schedaVerbali, cronoprogramma: schedaCronoprogramma,
 };
+
+// ------------------------------------------------------------ cronoprogramma (solo da leggere; il calcolo e il disegno stanno in gantt.js)
+function schedaCronoprogramma(c) {
+  const k = c.cronoprogramma;
+  if (!k || !(k.attivita || []).length || typeof Gantt === 'undefined') return nulla('Nessun cronoprogramma', 'Il cronoprogramma si prepara sul Mac, nella scheda «Cronoprogramma» della commessa.');
+  k.attivita.forEach(a => { a.legami ||= []; });
+  const r = Gantt.calcola(k, { inizio: k.inizio || c.cantiere.inizioLavori || Gantt.iso(Gantt.oggi()) });
+  const nomeImpresa = a => { const x = a.impresaId && c.imprese.find(i => i.id === a.impresaId); return x ? nomeSoggetto(x) : (a.impresa || '').trim(); };
+  const scala = UI.cronoScala || 'settimane';
+  const disegno = Gantt.svg(k, r, { scala, base: k.mostraBase && !!k.base });
+  const tempo = h('div.gt-tempo');
+  tempo.innerHTML = disegno.svg;
+  setTimeout(() => { const t = Math.min(Math.max(Gantt.oggi(), r.inizio), r.fine); tempo.scrollLeft = Math.max(0, (t - disegno.da) * disegno.px - 40); }, 0);
+  const superate = k.attivita.filter(a => r.voci[a.id].violata);
+  const box = (titolo, valore, colore) => h('div', { colore }, h('span', titolo), h('b', valore));
+  const giorni = n => n === 1 ? '1 g' : `${n} gg`;
+  return [
+    h('div.gt-sintesi',
+      box('Inizio lavori', Gantt.it(r.inizio), '#4d6a82'), box('Fine prevista', Gantt.it(r.fine), '#3d6fb6'),
+      box('Avanzamento', `${Math.round(r.avanzamento)} %`, '#4f8a3c'), box('Scadenze vincolanti', superate.length ? `${superate.length} superat${superate.length === 1 ? 'a' : 'e'}` : 'Rispettate', superate.length ? '#b8433a' : '#4f8a3c')),
+    superate.map(a => h('div.gt-avviso', `${a.nome} finisce il ${Gantt.it(r.voci[a.id].e)}, oltre la scadenza del ${Gantt.it(r.voci[a.id].scadenza)}.`)),
+    h('div.filtri', [['giorni', 'Giorni'], ['settimane', 'Settimane'], ['mesi', 'Mesi']].map(([id, nome]) => h('button' + (scala === id ? '.attiva' : ''), { onclick: () => { UI.cronoScala = id; disegna(); } }, nome))),
+    h('div.gantt',
+      h('div.gt-elenco', h('div.gt-testa', 'Attività'), k.attivita.map(a => h('div.gt-riga' + (r.voci[a.id].violata ? '.rosso' : ''), h('i', { style: 'background:' + Gantt.coloreDi(k, a) }), h('span', a.nome || 'Attività')))),
+      tempo),
+    h('div.gt-legenda', h('b', 'IMPRESE'), Gantt.legenda(k, a => nomeImpresa(a) || 'Impresa senza nome').map(x => h('span', h('i', { style: 'background:' + x.colore }), x.nome))),
+    sezione('Attività', k.attivita.map((a, i) => {
+      const v = r.voci[a.id];
+      return voce('crono-' + a.id, `${i + 1}. ${a.nome || 'Attività'}`, `${Gantt.it(v.s)} → ${Gantt.it(v.e)} · ${giorni(v.durata)} lavorativi`,
+        [v.violata && pillola('Scadenza superata', '#b8433a'), v.ritardo && pillola('In ritardo', '#c98a1b'), v.perc >= 100 && pillola('Finita', '#4f8a3c')].filter(Boolean),
+        dato('Impresa', nomeImpresa(a)), dato('Avanzamento', v.perc + ' %'), a.sabato && dato('Sabato', 'Si lavora anche il sabato'),
+        dato('Dipende da', a.legami.map(l => { const p = k.attivita.find(x => x.id === l.da); const t = Gantt.TIPI.find(x => x.id === (l.tipo || 'FI')); return p ? `${t ? t.nome : ''}: ${p.nome}${l.gg ? ` (${l.gg > 0 ? '+' : ''}${l.gg} gg)` : ''}` : ''; }).filter(Boolean).join('\n')),
+        a.milestone && dato('Scadenza vincolante', a.scadenza ? Gantt.it(Gantt.num(a.scadenza)) : 'Milestone'));
+    })),
+    sezione('Documento', file([], k.pdf)),
+  ];
+}
 
 // ------------------------------------------------------------ viste
 function vistaCommessa(r) {

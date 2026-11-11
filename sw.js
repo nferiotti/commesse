@@ -1,7 +1,7 @@
 // Tiene sul telefono le pagine della webapp, così si apre anche senza rete.
 // Le richieste a Dropbox non passano da qui.
-const CASSA = 'commesse-1';
-const PAGINE = ['./', 'index.html', 'manifest.json', 'icona-180.png', 'icona-512.png'];
+const CASSA = 'commesse-2';
+const PAGINE = ['./', 'index.html', 'gantt.js', 'manifest.json', 'icona-180.png', 'icona-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CASSA).then(c => c.addAll(PAGINE)).then(() => self.skipWaiting()));
