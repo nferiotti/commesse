@@ -189,6 +189,9 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 .gt-legenda b { font-size: 11.5px; letter-spacing: .08em; color: var(--muted); }
 .gt-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .gt-legenda i { width: 20px; height: 10px; border-radius: 3px; }
+.gt-legenda .gt-giorno { color: var(--muted); font-size: 12.5px; }
+.gt-legenda .gt-giorno i { border: 1px solid #d9dfe6; }
+.gt-testa { box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -204,7 +207,7 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.7';
+const VERSIONE = '1.9';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -919,9 +922,10 @@ function schedaCronoprogramma(c) {
     superate.map(a => h('div.gt-avviso', `${a.nome} finisce il ${Gantt.it(r.voci[a.id].e)}, oltre la scadenza del ${Gantt.it(r.voci[a.id].scadenza)}.`)),
     h('div.filtri', [['giorni', 'Giorni'], ['settimane', 'Settimane'], ['mesi', 'Mesi']].map(([id, nome]) => h('button' + (scala === id ? '.attiva' : ''), { onclick: () => { UI.cronoScala = id; disegna(); } }, nome))),
     h('div.gantt',
-      h('div.gt-elenco', h('div.gt-testa', 'Attività'), k.attivita.map(a => h('div.gt-riga' + (r.voci[a.id].violata ? '.rosso' : ''), h('i', { style: 'background:' + Gantt.coloreDi(k, a) }), h('span', a.nome || 'Attività')))),
+      h('div.gt-elenco', h('div.gt-testa', { style: `height:${disegno.testa}px` }, 'Attività'), k.attivita.map(a => h('div.gt-riga' + (r.voci[a.id].violata ? '.rosso' : ''), h('i', { style: 'background:' + Gantt.coloreDi(k, a) }), h('span', a.nome || 'Attività')))),
       tempo),
-    h('div.gt-legenda', h('b', 'IMPRESE'), Gantt.legenda(k, a => nomeImpresa(a) || 'Impresa senza nome').map(x => h('span', h('i', { style: 'background:' + x.colore }), x.nome))),
+    h('div.gt-legenda', h('b', 'IMPRESE'), Gantt.legenda(k, a => nomeImpresa(a) || 'Impresa senza nome').map(x => h('span', h('i', { style: 'background:' + x.colore }), x.nome)),
+      [['sabato', 'sabato'], ['domenica', 'domenica e festività (anche aggiunte)']].map(([c, t]) => h('span.gt-giorno', h('i', { style: 'background:' + Gantt.COLORI_GIORNI[c] }), t))),
     sezione('Attività', k.attivita.map((a, i) => {
       const v = r.voci[a.id];
       return voce('crono-' + a.id, `${i + 1}. ${a.nome || 'Attività'}`, `${Gantt.it(v.s)} → ${Gantt.it(v.e)} · ${giorni(v.durata)} lavorativi`,

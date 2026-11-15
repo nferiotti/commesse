@@ -1,6 +1,6 @@
 // Tiene sul telefono le pagine della webapp, così si apre anche senza rete.
 // Le richieste a Dropbox non passano da qui.
-const CASSA = 'commesse-2';
+const CASSA = 'commesse-4';
 const PAGINE = ['./', 'index.html', 'gantt.js', 'manifest.json', 'icona-180.png', 'icona-512.png'];
 
 self.addEventListener('install', e => {
