@@ -190,11 +190,13 @@ const Gantt = (() => {
   function svg(crono, r, o) {
     const px = o.px || SCALE[o.scala] || 10;
     const L = o.nomi || 0;
+    const lettere = o.scala !== 'mesi' && px >= 9;          // riga L M M G V S D sotto le date
+    const T = lettere ? 64 : 46;
     const righe = o.righe || crono.attivita || [];
     let { da, a } = o.da != null ? o : intervallo(crono, r, o.scala, o.margine);
     if (o.minimo) while ((a - da + 1) * px < o.minimo - L) a++;      // il disegno arriva almeno fino al bordo del riquadro
     const giorni = a - da + 1;
-    const W = L + giorni * px, H = TESTA + Math.max(1, righe.length) * ALTO + 8;
+    const W = L + giorni * px, H = T + Math.max(1, righe.length) * ALTO + 8;
     const x = n => L + (n - da) * px;
     const out = [];
     out.push(`<svg xmlns="http://www.w3.org/2000/svg" class="gantt-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="-apple-system, Helvetica, Arial, sans-serif">`);
@@ -202,20 +204,27 @@ const Gantt = (() => {
     out.push(`<defs><marker id="g-freccia" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#5d6874"/></marker><clipPath id="${taglio}"><rect x="${L}" y="0" width="${W - L}" height="${H}"/></clipPath></defs>`);
     out.push(`<g clip-path="url(#${taglio})">`);   // le barre che escono dal periodo disegnato non finiscono sopra i nomi
     // righe alternate
-    righe.forEach((_, i) => { if (i % 2) out.push(`<rect x="${L}" y="${TESTA + i * ALTO}" width="${giorni * px}" height="${ALTO}" fill="#f6f8fa"/>`); });
-    // giorni non lavorativi (domeniche, festivi, chiusure; i sabati più chiari)
-    if (px >= 5) {
-      for (let n = da; n <= a; n++) {
-        const g = dow(n), f = festa(n) || r.cal.chiuso.get(n);
-        if (g === 0 || f) out.push(`<rect x="${x(n)}" y="${TESTA}" width="${px}" height="${H - TESTA}" fill="#e6ebf0"><title>${esc(breve(n) + (f ? ' — ' + f : ''))}</title></rect>`);
-        else if (g === 6) out.push(`<rect x="${x(n)}" y="${TESTA}" width="${px}" height="${H - TESTA}" fill="#eff3f6"/>`);
-      }
-    } else {
-      for (let n = da; n <= a; n++) { const f = festa(n) || r.cal.chiuso.get(n); if (f && dow(n) !== 0) out.push(`<rect x="${x(n)}" y="${TESTA}" width="${Math.max(px, 1.5)}" height="${H - TESTA}" fill="#e3e8ee"/>`); }
+    righe.forEach((_, i) => { if (i % 2) out.push(`<rect x="${L}" y="${T + i * ALTO}" width="${giorni * px}" height="${ALTO}" fill="#f6f8fa"/>`); });
+    // colori dei giorni non lavorativi: sabato giallo chiaro, domenica, festivi e festività aggiunte rosa
+    const COL = { sab: '#f6efdc', dom: '#f8e4e1', chiuso: '#e3e8ee' };
+    const TINTA = { sab: '#a8741a', dom: '#b8433a', chiuso: '#5d6874' };
+    const tipoGiorno = n => {
+      const g = dow(n), f = festa(n), z = r.cal.chiuso.get(n);
+      return f ? ['dom', f] : g === 0 ? ['dom', 'domenica'] : z ? ['dom', z] : g === 6 ? ['sab', 'sabato'] : null;
+    };
+    for (let n = da; n <= a; n++) {
+      const t = tipoGiorno(n);
+      if (!t || (px < 3 && t[1] === 'domenica') || (px < 3 && t[0] === 'sab')) continue;
+      out.push(`<rect x="${x(n)}" y="${lettere ? 23 : T}" width="${Math.max(px, 1.5)}" height="${H - (lettere ? 23 : T)}" fill="${COL[t[0]]}"><title>${esc(breve(n) + ' — ' + t[1])}</title></rect>`);
     }
-    // intestazione: mesi sopra, giorni / settimane / mesi sotto
-    out.push(`<rect x="${L}" y="0" width="${giorni * px}" height="${TESTA}" fill="#e8eef4"/>`);
-    out.push(`<line x1="${L}" y1="${TESTA / 2}" x2="${W}" y2="${TESTA / 2}" stroke="#d3dce5"/>`);
+    // intestazione: mesi (o anni) sopra, poi giorni / settimane / mesi, poi le iniziali dei giorni
+    out.push(`<rect x="${L}" y="0" width="${giorni * px}" height="23" fill="#e8eef4"/>`);
+    if (!lettere) out.push(`<rect x="${L}" y="23" width="${giorni * px}" height="${T - 23}" fill="#e8eef4"/>`);
+    else out.push(`<rect x="${L}" y="23" width="${giorni * px}" height="${T - 23}" fill="#eef2f6" fill-opacity=".55"/>`);
+    // griglia: una linea per ogni giorno (più marcata il lunedì), così si legge il giorno su ogni lavorazione
+    if (px >= 5) for (let n = da; n <= a; n++) out.push(`<line x1="${x(n)}" y1="${lettere ? 44 : T}" x2="${x(n)}" y2="${H}" stroke="${dow(n) === 1 ? '#d3dbe3' : '#e9edf1'}"/>`);
+    out.push(`<line x1="${L}" y1="23" x2="${W}" y2="23" stroke="#d3dce5"/>`);
+    if (lettere) out.push(`<line x1="${L}" y1="44" x2="${W}" y2="44" stroke="#dbe2e9"/>`);
     const sopra = o.scala === 'mesi' ? 'anno' : 'mese';
     let n = da;
     while (n <= a) {
@@ -224,7 +233,7 @@ const Gantt = (() => {
       const f = Math.min(fineBlocco, a);
       const w = (f - n + 1) * px;
       const testo = sopra === 'anno' ? String(d.getUTCFullYear()) : (w > 90 ? `${MESI[d.getUTCMonth()]} ${d.getUTCFullYear()}` : w > 34 ? MESI3[d.getUTCMonth()] : '');
-      out.push(`<line x1="${x(n)}" y1="0" x2="${x(n)}" y2="${H}" stroke="#cfd8e1"/>`);
+      out.push(`<line x1="${x(n)}" y1="0" x2="${x(n)}" y2="${H}" stroke="#c3cdd8"/>`);
       if (testo) out.push(`<text x="${x(n) + 6}" y="16" font-size="11.5" font-weight="700" fill="#2f3e4c">${esc(testo)}</text>`);
       n = f + 1;
     }
@@ -233,26 +242,30 @@ const Gantt = (() => {
         const d = data(k);
         if (d.getUTCDate() !== 1) continue;
         const w = (new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()) * px;
-        out.push(`<line x1="${x(k)}" y1="${TESTA / 2}" x2="${x(k)}" y2="${H}" stroke="#dde3ea"/>`);
+        out.push(`<line x1="${x(k)}" y1="23" x2="${x(k)}" y2="${H}" stroke="#dde3ea"/>`);
         out.push(`<text x="${x(k) + w / 2}" y="38" font-size="10.5" text-anchor="middle" fill="#5d6874">${MESI3[d.getUTCMonth()]}</text>`);
       }
     } else if (o.scala === 'settimane' || px < 16) {
       for (let k = da; k <= a; k++) {
         if (dow(k) !== 1) continue;
         const d = data(k);
-        out.push(`<line x1="${x(k)}" y1="${TESTA / 2}" x2="${x(k)}" y2="${H}" stroke="#e1e6ec"/>`);
+        out.push(`<line x1="${x(k)}" y1="23" x2="${x(k)}" y2="44" stroke="#c9d2dc"/>`);
         if (7 * px >= 30) out.push(`<text x="${x(k) + 3}" y="38" font-size="10" fill="#5d6874">${d.getUTCDate()}/${d.getUTCMonth() + 1}</text>`);
       }
     } else {
       for (let k = da; k <= a; k++) {
-        const d = data(k), g = dow(k);
-        out.push(`<text x="${x(k) + px / 2}" y="38" font-size="10" text-anchor="middle" fill="${g === 0 || festa(k) ? '#b8433a' : '#5d6874'}">${d.getUTCDate()}</text>`);
+        const t = tipoGiorno(k);
+        out.push(`<text x="${x(k) + px / 2}" y="38" font-size="10" text-anchor="middle" fill="${t ? TINTA[t[0]] : '#5d6874'}">${data(k).getUTCDate()}</text>`);
       }
     }
-    out.push(`<line x1="${L}" y1="${TESTA}" x2="${W}" y2="${TESTA}" stroke="#b9c5d1"/>`);
+    if (lettere) for (let k = da; k <= a; k++) {
+      const t = tipoGiorno(k);
+      out.push(`<text x="${x(k) + px / 2}" y="58" font-size="${px >= 16 ? 10 : 8}" font-weight="${t ? 700 : 400}" text-anchor="middle" fill="${t ? TINTA[t[0]] : '#5d6874'}">${'DLMMGVS'[dow(k)]}</text>`);
+    }
+    out.push(`<line x1="${L}" y1="${T}" x2="${W}" y2="${T}" stroke="#b9c5d1"/>`);
     // legami (frecce)
     const riga = new Map(righe.map((att, i) => [att.id, i]));
-    const yc = i => TESTA + i * ALTO + ALTO / 2;
+    const yc = i => T + i * ALTO + ALTO / 2;
     for (const att of righe) {
       const i = riga.get(att.id), v = r.voci[att.id];
       for (const l of att.legami || []) {
@@ -272,7 +285,7 @@ const Gantt = (() => {
     // barre
     righe.forEach((att, i) => {
       const v = r.voci[att.id]; if (!v) return;
-      const y = TESTA + i * ALTO;
+      const y = T + i * ALTO;
       const col = coloreDi(crono, att);
       const tit = esc(`${att.nome || 'Attività'}\n${breve(v.s)} → ${breve(v.e)} · ${v.durata} gg lavorativi${att.sabato ? ' (sabato compreso)' : ''}` +
         `\nAvanzamento ${v.perc}%` + (v.scadenza != null ? `\nScadenza vincolante: ${breve(v.scadenza)}${v.violata ? ' — SUPERATA' : ''}` : '') + (v.ritardo ? '\nIn ritardo rispetto al programma' : ''));
@@ -306,19 +319,19 @@ const Gantt = (() => {
     // oggi
     const t = oggi();
     if (t >= da && t <= a) {
-      out.push(`<line x1="${x(t) + px / 2}" y1="${TESTA - 4}" x2="${x(t) + px / 2}" y2="${H}" stroke="#b8433a" stroke-width="1.5" stroke-dasharray="4 3"/>`);
-      out.push(`<rect x="${x(t) + px / 2 - 15}" y="${TESTA - 12}" width="30" height="13" rx="6.5" fill="#b8433a"/><text x="${x(t) + px / 2}" y="${TESTA - 2.5}" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">oggi</text>`);
+      out.push(`<line x1="${x(t) + px / 2}" y1="${T - 4}" x2="${x(t) + px / 2}" y2="${H}" stroke="#b8433a" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+      out.push(`<rect x="${x(t) + px / 2 - 15}" y="${T - 12}" width="30" height="13" rx="6.5" fill="#b8433a"/><text x="${x(t) + px / 2}" y="${T - 2.5}" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">oggi</text>`);
     }
     out.push('</g>');
     // colonna dei nomi (solo nel PDF)
     if (L) {
-      out.push(`<rect x="0" y="0" width="${L}" height="${H}" fill="#fff"/><rect x="0" y="0" width="${L}" height="${TESTA}" fill="#e8eef4"/>`);
+      out.push(`<rect x="0" y="0" width="${L}" height="${H}" fill="#fff"/><rect x="0" y="0" width="${L}" height="${T}" fill="#e8eef4"/>`);
       out.push(`<text x="10" y="29" font-size="11.5" font-weight="700" fill="#2f3e4c">Attività</text>`);
       out.push(`<text x="${L - 10}" y="29" font-size="10.5" font-weight="700" text-anchor="end" fill="#5d6874">gg · inizio → fine</text>`);
       const max = Math.floor((L - 132) / 5.6);       // caratteri per riga; i nomi lunghi vanno su due righe
       righe.forEach((att, i) => {
         const v = r.voci[att.id]; if (!v) return;
-        const y = TESTA + i * ALTO;
+        const y = T + i * ALTO;
         const nome = (o.numeri ? `${(o.primo || 0) + i + 1}. ` : '') + (att.nome || 'Attività senza nome');
         const peso = att.milestone ? ' font-weight="700"' : '';
         if (i % 2) out.push(`<rect x="0" y="${y}" width="${L}" height="${ALTO}" fill="#f6f8fa"/>`);
@@ -335,10 +348,12 @@ const Gantt = (() => {
       out.push(`<line x1="${L}" y1="0" x2="${L}" y2="${H}" stroke="#b9c5d1"/>`);
     }
     out.push('</svg>');
-    return { svg: out.join(''), larghezza: W, altezza: H, da, a, px, x };
+    return { svg: out.join(''), larghezza: W, altezza: H, da, a, px, x, testa: T };
   }
 
-  return { num, iso, it, breve, oggi, pasqua, festa, festeTra, calendario, calcola, TIPI, successori, creaCiclo, PALETTE, SENZA, chiaveImpresa, normale,
+  const COLORI_GIORNI = { sabato: '#f6efdc', domenica: '#f8e4e1', chiusura: '#f8e4e1' };
+  const altezzaTesta = (scala, px) => scala !== 'mesi' && px >= 9 ? 64 : 46;
+  return { COLORI_GIORNI, altezzaTesta, num, iso, it, breve, oggi, pasqua, festa, festeTra, calendario, calcola, TIPI, successori, creaCiclo, PALETTE, SENZA, chiaveImpresa, normale,
     assegnaColori, coloreDi, legenda, svg, intervallo, SCALE, ALTO, TESTA, MESI, MESI3, dow };
 })();
 if (typeof module !== 'undefined') module.exports = Gantt;

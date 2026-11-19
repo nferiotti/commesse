@@ -207,7 +207,7 @@ footer.nota { text-align: center; color: var(--muted); font-size: 13px; margin-t
 'use strict';
 // Chiave pubblica dell'app registrata su Dropbox (non è una password).
 const APP_KEY = '6l0ko03m8r7y4me';
-const VERSIONE = '1.9';
+const VERSIONE = '1.12';
 const API = 'https://api.dropboxapi.com';
 const CONTENUTI = 'https://content.dropboxapi.com';
 const PERMESSI = 'files.metadata.read files.content.read';
@@ -539,8 +539,12 @@ const colonnaDi = v => (DATI.indice?.colonne || []).find(k => k.id === v.colonna
 
 // ------------------------------------------------------------ pezzi di interfaccia
 const pillola = (testo, colore) => h('span.pillola', { colore }, testo);
+// documento chiuso con il lucchetto sul Mac: non si modifica più
+const segnoBlocco = x => x.bloccato ? pillola('🔒 Bloccato', '#4d6a82') : null;
+// i campi fatti di note singole (array) si leggono come elenco numerato
+const elencoTesto = x => Array.isArray(x) ? x.map(t => String(t ?? '').trim()).filter(Boolean).map((t, i) => `${i + 1}. ${t}`).join('\n') : x;
 const dato = (etichetta, valore) => {
-  const v = valore instanceof Node ? valore : testoPiano(valore);
+  const v = valore instanceof Node ? valore : testoPiano(elencoTesto(valore));
   return v ? h('div.dato', h('span', etichetta), h('div', v)) : null;
 };
 const nulla = (titolo, testo) => h('div.vuoto', h('b', titolo), testo);
@@ -548,7 +552,7 @@ const nulla = (titolo, testo) => h('div.vuoto', h('b', titolo), testo);
 function voce(id, titolo, sotto, pillole, ...corpo) {
   const d = h('details.voce', { id: 'voce-' + id, open: UI.aperti.has(id) },
     h('summary',
-      h('div', h('span.voce-titolo', titolo), sotto && h('span.voce-sotto', sotto), pillole && h('div.pillole', pillole)),
+      h('div', h('span.voce-titolo', titolo), sotto && h('span.voce-sotto', sotto), pillole?.length ? h('div.pillole', pillole) : null),
       h('span.freccia', icona('avanti'))),
     h('div.corpo', corpo));
   d.addEventListener('toggle', () => { d.open ? UI.aperti.add(id) : UI.aperti.delete(id); });
@@ -747,12 +751,12 @@ function schedaSoggetti(c, tipo) {
     const prossima = fasi.find(e => !e.fatto);
     const numeri = [[k.cellulare, 'Cellulare'], [k.telefono, 'Telefono']].filter(n => n[0]);
     const prodotti = tipo === 'fornitori' ? c.prodotti.filter(p => p.fornitoreId === x.id) : [];
-    return voce(x.id, nomeSoggetto(x), [x.categoria || k.categoria, k.referente].filter(Boolean).join(' · '),
+    return voce(x.id, nomeSoggetto(x), [tipo === 'imprese' && x.ruolo, x.categoria || k.categoria, k.referente].filter(Boolean).join(' · '),
       fasi.length > 0 && pillola(`${fatte}/${fasi.length} fasi${prossima ? ' · prossima: ' + prossima.testo : ''}`, fatte === fasi.length ? '#4f8a3c' : '#4d6a82'),
       numeri.length + (k.email ? 1 : 0) > 0 && h('div.azioni',
         numeri.map(([n, t]) => h('a.tasto', { href: 'tel:' + n.replace(/\s/g, '') }, icona('telefono'), t)),
         k.email && h('a.tasto', { href: 'mailto:' + k.email }, icona('mail'), 'Email')),
-      dato('Referente', k.referente), dato('Cellulare', k.cellulare), dato('Telefono', k.telefono), dato('Email', k.email), dato('PEC', k.pec),
+      tipo === 'imprese' && dato('Ruolo nel cantiere', x.ruolo), dato('Referente', k.referente), dato('Cellulare', k.cellulare), dato('Telefono', k.telefono), dato('Email', k.email), dato('PEC', k.pec),
       dato('Partita IVA', k.piva), dato('Indirizzo', k.indirizzo), dato('Sito', k.sito), dato('Note in rubrica', k.note),
       Number(x.importo) > 0 && dato('Importo', [euro(x.importo), Number(x.perc) > 0 && `${x.perc}%`].filter(Boolean).join(' · ')),
       Number(x.avanzamento) > 0 && dato('Avanzamento', `${x.avanzamento}%`),
@@ -824,7 +828,7 @@ function schedaProdotti(c) {
   return Object.entries(gruppi).map(([categoria, lista]) => [h('div.gruppo', categoria), lista.map(p => voceProdotto(c, p))]);
 }
 
-const perData = lista => [...lista].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+const perData = lista => [...lista].sort((a, b) => (b.data || '').localeCompare(a.data || '') || (Number(b.numero) || 0) - (Number(a.numero) || 0));
 
 function schedaSopralluoghi(c) {
   if (!c.sopralluoghi.length) return nulla('Nessun sopralluogo', 'I sopralluoghi inseriti sul Mac compaiono qui.');
@@ -833,8 +837,8 @@ function schedaSopralluoghi(c) {
       const i = c.imprese.find(x => x.id === d.id);
       return i ? `${nomeSoggetto(i)}${d.operai ? ` (${d.operai})` : ''}` : null;
     }).filter(Boolean).join('\n');
-    return voce(s.id, 'Sopralluogo del ' + dataIT(s.data), [s.fase, s.operai && `${s.operai} operai`, (s.foto || []).length && `${s.foto.length} foto`].filter(Boolean).join(' · '), null,
-      dato('Orario', [s.oraInizio, s.oraFine].filter(Boolean).join(' – ')), dato('Meteo', s.meteo), dato('Ditte presenti', ditte), dato('Fase lavorativa', s.fase),
+    return voce(s.id, `Sopralluogo${s.numero ? ' n. ' + s.numero : ''} del ${dataIT(s.data)}`, [s.fase, s.operai && `${s.operai} operai`, (s.foto || []).length && `${s.foto.length} foto`].filter(Boolean).join(' · '), [segnoBlocco(s)].filter(Boolean),
+      dato('Orario', [s.oraInizio, s.oraFine].filter(Boolean).join(' – ')), dato('Meteo', s.meteo), dato('Ditte presenti', ditte), dato('Fase lavorativa', s.fase), dato('Altre lavorazioni in corso', s.altreLavorazioni),
       dato('Annotazioni', s.annotazioni), dato('Indicazioni impartite', s.indicazioni), dato('Lavorazioni future', s.future),
       sezione('Cose da fare', elencoAttivita(s.dafare)),
       sezione('Foto', griglia(s.foto)),
@@ -844,8 +848,8 @@ function schedaSopralluoghi(c) {
 
 function schedaRiunioni(c) {
   if (!c.riunioni.length) return nulla('Nessun report', 'I report inseriti sul Mac compaiono qui.');
-  return perData(c.riunioni).map(r => voce(r.id, r.titolo || tipoReport(r), [dataIT(r.data), r.ora, r.titolo && tipoReport(r)].filter(Boolean).join(' · '), null,
-    dato('Partecipanti', r.partecipanti), dato('Sintesi', r.sintesi), dato('Decisioni prese', r.decisioni),
+  return perData(c.riunioni).map(r => voce(r.id, r.titolo || tipoReport(r), [dataIT(r.data), r.ora, r.titolo && tipoReport(r)].filter(Boolean).join(' · '), [segnoBlocco(r)].filter(Boolean),
+    dato('Partecipanti', r.partecipanti), dato('Sintesi', r.sintesi), dato('Punti trattati', r.punti), dato('Decisioni prese', r.decisioni),
     sezione('Da fare e scadenze', elencoAttivita(r.dafare)),
     sezione('Allegati', file(r.allegati, r.pdf))));
 }
@@ -855,7 +859,7 @@ function voceCoordinamento(v) {
   const soggetti = (v.soggetti || []).filter(s => s.nome);
   const elenco = lista => lista.map(s => `${s.nome} · ${ruolo(s)}`).join('\n');
   const r = v.redazione || {};
-  return voce(v.id, `Verbale di coordinamento n. ${v.numero || ''}`, dataIT(v.data), [],
+  return voce(v.id, `Verbale di coordinamento n. ${v.numero || ''}`, dataIT(v.data), [segnoBlocco(v)].filter(Boolean),
     dato('Luogo della riunione', v.luogo),
     dato('Presenti', elenco(soggetti.filter(s => s.presente))), dato('Assenti', elenco(soggetti.filter(s => !s.presente))),
     (v.argomenti || []).filter(a => a.testo).map((a, i) => dato(`Argomento ${i + 1}`, a.testo)),
@@ -880,7 +884,7 @@ function schedaVerbali(c) {
     }).filter(Boolean).join('\n');
     const controlli = (v.checklist || []).filter(r => r.esito);
     return voce(v.id, `Verbale di sopralluogo n. ${v.numero || ''}`, dataIT(v.data),
-      [v.sospensione?.attiva && pillola('Sospensione', '#b8433a'), aperte > 0 && pillola(aperte === 1 ? '1 non conformità aperta' : `${aperte} non conformità aperte`, '#b8433a')].filter(Boolean),
+      [segnoBlocco(v), v.sospensione?.attiva && pillola('Sospensione', '#b8433a'), aperte > 0 && pillola(aperte === 1 ? '1 non conformità aperta' : `${aperte} non conformità aperte`, '#b8433a')].filter(Boolean),
       dato('Orario', [v.oraInizio, v.oraFine].filter(Boolean).join(' – ')), dato('Meteo', v.meteo), dato('Imprese presenti', presenti),
       dato('Stato del cantiere', v.statoCantiere), dato('Lavorazioni future', v.lavorazioniFuture), dato('Note del CSE', v.noteCSE), dato('Disposizioni', v.disposizioni),
       v.sospensione?.attiva && dato('Sospensione', v.sospensione.testo || 'Lavori sospesi'), dato('Prossimo sopralluogo', dataIT(v.prossimo) || v.prossimo),
